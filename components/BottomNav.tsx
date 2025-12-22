@@ -11,7 +11,7 @@ export default function BottomNav({ activeTab, onTabPress }: BottomNavProps) {
   const tabs = [
     { id: 'home', label: 'Home', icon: 'home' },
     { id: 'search', label: 'Search', icon: 'search' },
-    { id: 'saved', label: 'Saved', icon: 'bookmark' },
+    { id: 'applied', label: 'Applied', icon: 'work' },
     { id: 'profile', label: 'Profile', icon: 'person' },
   ];
 
@@ -26,11 +26,11 @@ export default function BottomNav({ activeTab, onTabPress }: BottomNavProps) {
           <Icon
             name={tab.icon}
             size={24}
-            color={activeTab === tab.id ? '#DC2626' : '#6B7280'}
+            color={activeTab === tab.id ? '#1F2937' : '#6B7280'}
           />
           <Text style={[
             styles.tabLabel,
-            { color: activeTab === tab.id ? '#DC2626' : '#6B7280' }
+            { color: activeTab === tab.id ? '#1F2937' : '#6B7280' }
           ]}>
             {tab.label}
           </Text>

@@ -1,38 +1,55 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Linking, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Axios from '../libs/Axios';
 
 interface Job {
   _id: string;
-  title: string;
+  role: string;
+  title?: string;
   description: string;
   location: string;
   salaryRange: string;
   jobType: string;
-  experienceLevel: string;
+  experienceLevel: number;
   skillsRequired: string[];
   workerMode: string;
   numberOfOpenings: number;
   benefits: string[];
   lastDateOfApplication: string;
+  educationRequirements?: string;
+  adminVerificationStatus?: string;
+  status: string;
+  tags?: string[];
+  offlineInstructions?: string[];
+  viewCount?: number;
   postedBy: {
-    name: string;
+    email: string;
+    _id: string;
     company?: {
+      _id: string;
       name: string;
       website?: string;
       logo?: string;
       about?: string;
+      industry?: string;
+      type?: string;
+      size?: number;
+      location?: string;
     };
   };
   createdAt: string;
+  postedAt: string;
   interviewStages?: Array<{
     _id: string;
     stageName: string;
     stageOrder: number;
     interviewType: string;
+    stageType: string;
+    isRequired: boolean;
   }>;
   hasApplied: boolean;
+  applicationStatus?: string | null;
 }
 
 interface JobDetailScreenProps {
@@ -69,7 +86,7 @@ export default function JobDetailScreen({ jobId, onBack }: JobDetailScreenProps)
       await fetchJobDetails();
     } catch (error: any) {
       console.error('Error applying:', error);
-      alert(error.response?.data?.message || 'Failed to apply');
+      Alert.alert('Error', error.response?.data?.message || 'Failed to apply');
     } finally {
       setApplying(false);
     }
@@ -108,36 +125,64 @@ export default function JobDetailScreen({ jobId, onBack }: JobDetailScreenProps)
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.jobHeader}>
-          <View style={styles.companyLogo}>
-            <Text style={styles.logoText}>{job.postedBy.company?.name?.charAt(0) || 'C'}</Text>
-          </View>
-          <Text style={styles.jobTitle}>{job.title}</Text>
-          <Text style={styles.companyName}>{job.postedBy.company?.name || job.postedBy.name}</Text>
+          {job.postedBy.company?.logo ? (
+            <Image source={{ uri: job.postedBy.company.logo }} style={styles.companyLogoImage} />
+          ) : (
+            <View style={styles.companyLogo}>
+              <Text style={styles.logoText}>{job.postedBy.company?.name?.charAt(0) || 'C'}</Text>
+            </View>
+          )}
+          <Text style={styles.jobTitle}>{job.role || job.title}</Text>
+          <Text style={styles.companyName}>{job.postedBy.company?.name || 'Company'}</Text>
+          {job.postedBy.company?.website && (
+            <TouchableOpacity onPress={() => Linking.openURL(`https://${job.postedBy.company?.website}`)}>
+              <Text style={styles.websiteLink}>{job.postedBy.company.website}</Text>
+            </TouchableOpacity>
+          )}
           
           <View style={styles.quickInfo}>
             <View style={styles.infoChip}>
-              <Icon name="location-on" size={14} color="#DC2626" />
+              <Icon name="location-on" size={14} color="#4B5563" />
               <Text style={styles.infoChipText}>{job.location}</Text>
             </View>
             <View style={styles.infoChip}>
-              <Icon name="work-outline" size={14} color="#DC2626" />
-              <Text style={styles.infoChipText}>{job.experienceLevel}y</Text>
+              <Icon name="work-outline" size={14} color="#4B5563" />
+              <Text style={styles.infoChipText}>{job.experienceLevel}y exp</Text>
             </View>
             <View style={styles.infoChip}>
-              <Icon name="schedule" size={14} color="#DC2626" />
+              <Icon name="schedule" size={14} color="#4B5563" />
               <Text style={styles.infoChipText}>{job.workerMode}</Text>
             </View>
           </View>
           
+          {job.adminVerificationStatus && (
+            <View style={styles.verificationBadge}>
+              <Icon name="verified" size={16} color="#059669" />
+              <Text style={styles.verificationText}>{job.adminVerificationStatus}</Text>
+            </View>
+          )}
+          
           <View style={styles.salaryCard}>
             <Text style={styles.salaryLabel}>Salary Range</Text>
-            <Text style={styles.salary}>₹{job.salaryRange}</Text>
+            <Text style={styles.salary}>₹{job.salaryRange.replace('-', ' - ₹')}</Text>
           </View>
         </View>
 
+        {job.tags && job.tags.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.tagsContainer}>
+              {job.tags.map((tag, index) => (
+                <View key={index} style={styles.tag}>
+                  <Text style={styles.tagText}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Icon name="description" size={20} color="#DC2626" />
+            <Icon name="description" size={20} color="#374151" />
             <Text style={styles.sectionTitle}>Job Description</Text>
           </View>
           <Text style={styles.description}>{job.description}</Text>
@@ -146,7 +191,7 @@ export default function JobDetailScreen({ jobId, onBack }: JobDetailScreenProps)
         {job.skillsRequired.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="code" size={20} color="#DC2626" />
+              <Icon name="code" size={20} color="#374151" />
               <Text style={styles.sectionTitle}>Required Skills</Text>
             </View>
             <View style={styles.skillsContainer}>
@@ -159,34 +204,56 @@ export default function JobDetailScreen({ jobId, onBack }: JobDetailScreenProps)
           </View>
         )}
 
+        {job.educationRequirements && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Icon name="school" size={20} color="#374151" />
+              <Text style={styles.sectionTitle}>Education Requirements</Text>
+            </View>
+            <Text style={styles.description}>{job.educationRequirements}</Text>
+          </View>
+        )}
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Icon name="info-outline" size={20} color="#DC2626" />
+            <Icon name="info-outline" size={20} color="#374151" />
             <Text style={styles.sectionTitle}>Job Information</Text>
           </View>
           <View style={styles.infoGrid}>
             <View style={styles.infoCard}>
-              <Icon name="business-center" size={24} color="#DC2626" />
+              <Icon name="business-center" size={24} color="#6B7280" />
               <Text style={styles.infoCardLabel}>Job Type</Text>
               <Text style={styles.infoCardValue}>{job.jobType}</Text>
             </View>
             <View style={styles.infoCard}>
-              <Icon name="people" size={24} color="#DC2626" />
+              <Icon name="people" size={24} color="#6B7280" />
               <Text style={styles.infoCardLabel}>Openings</Text>
               <Text style={styles.infoCardValue}>{job.numberOfOpenings || 1}</Text>
             </View>
+            <View style={styles.infoCard}>
+              <Icon name="event" size={24} color="#6B7280" />
+              <Text style={styles.infoCardLabel}>Apply By</Text>
+              <Text style={styles.infoCardValue}>{new Date(job.lastDateOfApplication).toLocaleDateString()}</Text>
+            </View>
+            {job.viewCount !== undefined && (
+              <View style={styles.infoCard}>
+                <Icon name="visibility" size={24} color="#6B7280" />
+                <Text style={styles.infoCardLabel}>Views</Text>
+                <Text style={styles.infoCardValue}>{job.viewCount}</Text>
+              </View>
+            )}
           </View>
         </View>
 
         {job.benefits.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="card-giftcard" size={20} color="#DC2626" />
+              <Icon name="card-giftcard" size={20} color="#374151" />
               <Text style={styles.sectionTitle}>Benefits & Perks</Text>
             </View>
             {job.benefits.map((benefit, index) => (
               <View key={index} style={styles.benefitItem}>
-                <Icon name="check-circle" size={18} color="#10B981" />
+                <Icon name="check-circle" size={18} color="#059669" />
                 <Text style={styles.benefitText}>{benefit}</Text>
               </View>
             ))}
@@ -196,7 +263,7 @@ export default function JobDetailScreen({ jobId, onBack }: JobDetailScreenProps)
         {job.interviewStages && job.interviewStages.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="assignment" size={20} color="#DC2626" />
+              <Icon name="assignment" size={20} color="#374151" />
               <Text style={styles.sectionTitle}>Interview Process</Text>
             </View>
             {job.interviewStages.map((stage, index) => (
@@ -214,13 +281,56 @@ export default function JobDetailScreen({ jobId, onBack }: JobDetailScreenProps)
           </View>
         )}
 
-        {job.postedBy.company?.about && (
+        {job.offlineInstructions && job.offlineInstructions.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="business" size={20} color="#DC2626" />
+              <Icon name="info" size={20} color="#374151" />
+              <Text style={styles.sectionTitle}>Additional Instructions</Text>
+            </View>
+            {job.offlineInstructions.map((instruction, index) => (
+              <View key={index} style={styles.benefitItem}>
+                <Icon name="arrow-right" size={18} color="#6B7280" />
+                <Text style={styles.benefitText}>{instruction}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {job.postedBy.company && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Icon name="business" size={20} color="#374151" />
               <Text style={styles.sectionTitle}>About Company</Text>
             </View>
-            <Text style={styles.description}>{job.postedBy.company.about}</Text>
+            {job.postedBy.company.about && (
+              <Text style={styles.description}>{job.postedBy.company.about}</Text>
+            )}
+            <View style={styles.companyDetails}>
+              {job.postedBy.company.industry && (
+                <View style={styles.companyDetailRow}>
+                  <Text style={styles.companyDetailLabel}>Industry:</Text>
+                  <Text style={styles.companyDetailValue}>{job.postedBy.company.industry}</Text>
+                </View>
+              )}
+              {job.postedBy.company.type && (
+                <View style={styles.companyDetailRow}>
+                  <Text style={styles.companyDetailLabel}>Company Type:</Text>
+                  <Text style={styles.companyDetailValue}>{job.postedBy.company.type}</Text>
+                </View>
+              )}
+              {job.postedBy.company.size && (
+                <View style={styles.companyDetailRow}>
+                  <Text style={styles.companyDetailLabel}>Company Size:</Text>
+                  <Text style={styles.companyDetailValue}>{job.postedBy.company.size} employees</Text>
+                </View>
+              )}
+              {job.postedBy.company.location && (
+                <View style={styles.companyDetailRow}>
+                  <Text style={styles.companyDetailLabel}>Location:</Text>
+                  <Text style={styles.companyDetailValue}>{job.postedBy.company.location}</Text>
+                </View>
+              )}
+            </View>
           </View>
         )}
         
@@ -230,7 +340,7 @@ export default function JobDetailScreen({ jobId, onBack }: JobDetailScreenProps)
       <View style={styles.footer}>
         {job.hasApplied ? (
           <View style={styles.appliedContainer}>
-            <Icon name="check-circle" size={24} color="#10B981" />
+            <Icon name="check-circle" size={24} color="#059669" />
             <Text style={styles.appliedText}>Application Submitted</Text>
           </View>
         ) : (
@@ -254,49 +364,59 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  errorText: { fontSize: 16, color: '#DC2626', marginBottom: 20 },
-  backButton: { backgroundColor: '#DC2626', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
+  errorText: { fontSize: 16, color: '#6B7280', marginBottom: 16 },
+  backButton: { backgroundColor: '#1F2937', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   backButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
-  header: { backgroundColor: '#FFFFFF', paddingTop: 50, paddingHorizontal: 20, paddingBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 3 },
-  backBtn: { padding: 4 },
-  shareBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F2937' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  backBtn: { padding: 8 },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937' },
+  shareBtn: { padding: 8 },
   content: { flex: 1 },
-  jobHeader: { backgroundColor: '#FFFFFF', padding: 24, alignItems: 'center', marginBottom: 12 },
-  companyLogo: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 2, borderColor: '#DC2626' },
-  logoText: { fontSize: 32, fontWeight: 'bold', color: '#DC2626' },
-  jobTitle: { fontSize: 22, fontWeight: 'bold', color: '#1F2937', textAlign: 'center', marginBottom: 8 },
-  companyName: { fontSize: 16, color: '#6B7280', marginBottom: 16 },
-  quickInfo: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16, justifyContent: 'center' },
-  infoChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEF2F2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
-  infoChipText: { fontSize: 12, color: '#DC2626', fontWeight: '600' },
-  salaryCard: { backgroundColor: '#FEF2F2', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: '#FEE2E2' },
-  salaryLabel: { fontSize: 12, color: '#6B7280', marginBottom: 4, textAlign: 'center' },
-  salary: { fontSize: 20, fontWeight: 'bold', color: '#DC2626', textAlign: 'center' },
-  section: { backgroundColor: '#FFFFFF', padding: 20, marginBottom: 12 },
+  jobHeader: { backgroundColor: '#FFFFFF', padding: 20, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  companyLogoImage: { width: 80, height: 80, borderRadius: 12, marginBottom: 16 },
+  companyLogo: { width: 80, height: 80, borderRadius: 12, backgroundColor: '#E5E7EB', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  logoText: { fontSize: 32, fontWeight: '700', color: '#6B7280' },
+  jobTitle: { fontSize: 20, fontWeight: '700', color: '#1F2937', textAlign: 'center', marginBottom: 8 },
+  companyName: { fontSize: 16, color: '#6B7280', marginBottom: 4 },
+  websiteLink: { fontSize: 14, color: '#2563EB', textDecorationLine: 'underline', marginBottom: 12 },
+  quickInfo: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 12 },
+  infoChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 4 },
+  infoChipText: { fontSize: 13, color: '#374151', fontWeight: '500' },
+  verificationBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#D1FAE5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 4, marginTop: 12 },
+  verificationText: { fontSize: 13, color: '#059669', fontWeight: '600' },
+  salaryCard: { backgroundColor: '#F9FAFB', padding: 16, borderRadius: 12, marginTop: 16, width: '100%', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
+  salaryLabel: { fontSize: 13, color: '#6B7280', marginBottom: 4 },
+  salary: { fontSize: 20, fontWeight: '700', color: '#1F2937' },
+  section: { backgroundColor: '#FFFFFF', padding: 20, marginTop: 8 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
-  sectionTitle: { fontSize: 17, fontWeight: 'bold', color: '#1F2937' },
-  description: { fontSize: 14, color: '#6B7280', lineHeight: 22 },
-  infoGrid: { flexDirection: 'row', gap: 12 },
-  infoCard: { flex: 1, backgroundColor: '#F9FAFB', padding: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
-  infoCardLabel: { fontSize: 12, color: '#6B7280', marginTop: 8, marginBottom: 4 },
-  infoCardValue: { fontSize: 16, fontWeight: 'bold', color: '#1F2937' },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: '#1F2937' },
+  description: { fontSize: 14, color: '#4B5563', lineHeight: 22 },
+  tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tag: { backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: '#D1D5DB' },
+  tagText: { fontSize: 12, color: '#374151', fontWeight: '500' },
   skillsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  skillBadge: { backgroundColor: '#DBEAFE', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#BFDBFE' },
-  skillText: { fontSize: 13, color: '#1E40AF', fontWeight: '600' },
-  benefitItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
-  benefitText: { flex: 1, fontSize: 14, color: '#374151', lineHeight: 20 },
-  stageItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 16, position: 'relative' },
-  stageNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#DC2626', alignItems: 'center', justifyContent: 'center' },
-  stageNumberText: { fontSize: 14, fontWeight: 'bold', color: '#FFFFFF' },
+  skillBadge: { backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#D1D5DB' },
+  skillText: { fontSize: 13, color: '#1F2937', fontWeight: '500' },
+  infoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  infoCard: { flex: 1, minWidth: '45%', backgroundColor: '#F9FAFB', padding: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
+  infoCardLabel: { fontSize: 12, color: '#6B7280', marginTop: 8 },
+  infoCardValue: { fontSize: 16, fontWeight: '600', color: '#1F2937', marginTop: 4 },
+  benefitItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 12 },
+  benefitText: { flex: 1, fontSize: 14, color: '#4B5563', lineHeight: 20 },
+  stageItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, position: 'relative' },
+  stageNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#E5E7EB', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  stageNumberText: { fontSize: 14, fontWeight: '600', color: '#374151' },
   stageInfo: { flex: 1 },
-  stageName: { fontSize: 15, fontWeight: '600', color: '#1F2937', marginBottom: 4 },
-  stageType: { fontSize: 13, color: '#6B7280' },
+  stageName: { fontSize: 14, fontWeight: '600', color: '#1F2937', marginBottom: 2 },
+  stageType: { fontSize: 12, color: '#6B7280' },
   stageLine: { position: 'absolute', left: 15, top: 32, width: 2, height: 16, backgroundColor: '#E5E7EB' },
-  footer: { backgroundColor: '#FFFFFF', padding: 20, borderTopWidth: 1, borderTopColor: '#E5E7EB', shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 5 },
-  appliedContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#ECFDF5', paddingVertical: 16, borderRadius: 12, borderWidth: 1, borderColor: '#10B981' },
-  appliedText: { fontSize: 16, fontWeight: '600', color: '#10B981' },
-  applyButton: { backgroundColor: '#DC2626', paddingVertical: 16, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, shadowColor: '#DC2626', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
-  applyButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  companyDetails: { marginTop: 16, gap: 12 },
+  companyDetailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  companyDetailLabel: { fontSize: 14, color: '#6B7280', fontWeight: '500' },
+  companyDetailValue: { fontSize: 14, color: '#1F2937', fontWeight: '600' },
+  footer: { backgroundColor: '#FFFFFF', padding: 16, borderTopWidth: 1, borderTopColor: '#E5E7EB' },
+  appliedContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12 },
+  appliedText: { fontSize: 16, fontWeight: '600', color: '#059669' },
+  applyButton: { backgroundColor: '#1F2937', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 12 },
+  applyButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
 });
- 
