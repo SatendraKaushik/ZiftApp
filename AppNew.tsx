@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { View, StyleSheet } from 'react-native';
 import AuthNavigator from './components/auth/AuthNavigator';
 import MainApp from './components/MainApp';
 import { TokenStorage } from './libs/TokenStorage';
 
-function App() {
+export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const isDarkMode = useColorScheme() === 'dark';
 
   useEffect(() => {
     checkAuthStatus();
@@ -40,26 +38,17 @@ function App() {
   };
 
   if (isLoading) {
-    return (
-      <SafeAreaProvider>
-        <View style={styles.container}>
-          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-        </View>
-      </SafeAreaProvider>
-    );
+    return <View style={styles.container} />;
   }
 
   return (
-    <SafeAreaProvider>
-      <View style={styles.container}>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-        {isAuthenticated ? (
-          <MainApp user={user} onLogout={handleLogout} />
-        ) : (
-          <AuthNavigator onAuthSuccess={handleAuthSuccess} />
-        )}
-      </View>
-    </SafeAreaProvider>
+    <View style={styles.container}>
+      {isAuthenticated ? (
+        <MainApp user={user} onLogout={handleLogout} />
+      ) : (
+        <AuthNavigator onAuthSuccess={handleAuthSuccess} />
+      )}
+    </View>
   );
 }
 
@@ -68,5 +57,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
-export default App;
