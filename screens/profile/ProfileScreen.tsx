@@ -9,9 +9,10 @@ interface ProfileScreenProps {
   onNavigateToApplied: () => void;
   onNavigateToSettings: () => void;
   onNavigateToEditProfile: (user: any) => void;
+  onNavigateToAnalytics: () => void;
 }
 
-export default function ProfileScreen({ onNavigateToApplied, onNavigateToSettings, onNavigateToEditProfile }: ProfileScreenProps) {
+export default function ProfileScreen({ onNavigateToApplied, onNavigateToSettings, onNavigateToEditProfile, onNavigateToAnalytics }: ProfileScreenProps) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updatingPublic, setUpdatingPublic] = useState(false);
@@ -179,6 +180,19 @@ export default function ProfileScreen({ onNavigateToApplied, onNavigateToSetting
               <View>
                 <Text style={styles.activityTitle}>My Applications</Text>
                 <Text style={styles.activitySubtitle}>View all your job applications</Text>
+              </View>
+            </View>
+            <Icon name="chevron-right" size={24} color="#9CA3AF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.activityCard, { marginTop: 12 }]} onPress={onNavigateToAnalytics}>
+            <View style={styles.activityLeft}>
+              <View style={[styles.activityIcon, { backgroundColor: '#FEF3C7' }]}>
+                <Icon name="bar-chart" size={24} color="#F59E0B" />
+              </View>
+              <View>
+                <Text style={styles.activityTitle}>Analytics</Text>
+                <Text style={styles.activitySubtitle}>View your coding statistics</Text>
               </View>
             </View>
             <Icon name="chevron-right" size={24} color="#9CA3AF" />

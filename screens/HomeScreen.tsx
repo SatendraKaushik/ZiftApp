@@ -46,15 +46,22 @@ interface Job {
 
 interface HomeScreenProps {
   onJobSelect?: (jobId: string) => void;
+  onNavigateToProfile?: () => void;
 }
 
-export default function HomeScreen({ onJobSelect }: HomeScreenProps) {
+export default function HomeScreen({ onJobSelect, onNavigateToProfile }: HomeScreenProps) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [userName, setUserName] = useState('User');
   const [userAvatar, setUserAvatar] = useState('');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [bookmarkedJobs, setBookmarkedJobs] = useState<Set<string>>(new Set());
+  const [filterOptions, setFilterOptions] = useState<{
+    locations: string[];
+    experienceLevels: string[];
+    workerModes: string[];
+  }>({ locations: [], experienceLevels: [], workerModes: [] });
   const [filters, setFilters] = useState({
     keyword: '',
     page: 1,
@@ -70,6 +77,7 @@ export default function HomeScreen({ onJobSelect }: HomeScreenProps) {
 
   useEffect(() => {
     loadUserData();
+    fetchFilterOptions();
   }, []);
 
   useEffect(() => {
@@ -113,6 +121,17 @@ export default function HomeScreen({ onJobSelect }: HomeScreenProps) {
     }
   };
 
+  const fetchFilterOptions = async () => {
+    try {
+      const response = await Axios.get('/user/jobs/filter-options');
+      if (response.data.data) {
+        setFilterOptions(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching filter options:', error);
+    }
+  };
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good Morning';
@@ -143,10 +162,35 @@ export default function HomeScreen({ onJobSelect }: HomeScreenProps) {
 
       const response = await Axios.get(`${endpoint}?${params.toString()}`);
       setJobs(response.data.data.jobs);
+      
+      // Check bookmark status for all jobs
+      const jobIds = response.data.data.jobs.map((job: Job) => job._id);
+      const bookmarkChecks = await Promise.all(
+        jobIds.map((id: string) => Axios.get(`/user/bookmarks/status/${id}`).catch(() => ({ data: { isBookmarked: false } })))
+      );
+      const bookmarked = new Set(jobIds.filter((_: string, idx: number) => bookmarkChecks[idx]?.data?.isBookmarked));
+      setBookmarkedJobs(bookmarked);
     } catch (error) {
       console.error('Error fetching jobs:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBookmark = async (jobId: string) => {
+    try {
+      const response = await Axios.post(`/user/bookmarks/toggle/${jobId}`);
+      if (response.data.isBookmarked) {
+        setBookmarkedJobs(prev => new Set([...prev, jobId]));
+      } else {
+        setBookmarkedJobs(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(jobId);
+          return newSet;
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
     }
   };
 
@@ -216,8 +260,8 @@ export default function HomeScreen({ onJobSelect }: HomeScreenProps) {
             </View>
           </View>
         </View>
-        <TouchableOpacity style={styles.bookmarkButton}>
-          <Icon name="bookmark-border" size={20} color="#6B7280" />
+        <TouchableOpacity style={styles.bookmarkButton} onPress={() => handleBookmark(item._id)}>
+          <Icon name={bookmarkedJobs.has(item._id) ? "bookmark" : "bookmark-border"} size={20} color={bookmarkedJobs.has(item._id) ? "#DC2626" : "#6B7280"} />
         </TouchableOpacity>
       </View>
       
@@ -252,9 +296,9 @@ export default function HomeScreen({ onJobSelect }: HomeScreenProps) {
         <View style={styles.headerTop}>
           <View style={styles.brandContainer}>
             <Image source={require('../components/assests/zift/ziftlogo.png')} style={styles.brandLogo} />
-            <Text style={styles.brandName}>TheZift</Text>
+            <Text style={styles.brandName}>ZiftJobs</Text>
           </View>
-          <TouchableOpacity style={styles.profileButton}>
+          <TouchableOpacity style={styles.profileButton} onPress={onNavigateToProfile}>
             {userAvatar ? (
               <Image source={{ uri: userAvatar }} style={styles.profileImage} />
             ) : (
@@ -285,31 +329,88 @@ export default function HomeScreen({ onJobSelect }: HomeScreenProps) {
               </TouchableOpacity>
             )}
           </View>
-          <TouchableOpacity 
-            style={[styles.filterButton, { zIndex: 999 }]} 
-            activeOpacity={0.7}
-            onPress={() => {
-              console.log('Filter button pressed, current state:', showFilterModal);
-              setShowFilterModal(!showFilterModal);
-            }}
-          >
-            <Icon name="tune" size={22} color="#FFFFFF" />
-            {(filters.location || filters.experienceLevel || filters.workerMode) && (
-              <View style={styles.filterBadge} />
-            )}
-          </TouchableOpacity>
         </View>
+
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionLabel}>Location</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {filterOptions.locations.map((location) => (
+              <TouchableOpacity
+                key={location}
+                style={[styles.filterChip, filters.location === location && styles.filterChipActive]}
+                onPress={() => setFilters(prev => ({ ...prev, location: prev.location === location ? '' : location, page: 1 }))}
+              >
+                <Text style={[styles.filterChipText, filters.location === location && styles.filterChipTextActive]}>{location}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionLabel}>Experience</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {filterOptions.experienceLevels.map((level) => (
+              <TouchableOpacity
+                key={level}
+                style={[styles.filterChip, filters.experienceLevel === level && styles.filterChipActive]}
+                onPress={() => setFilters(prev => ({ ...prev, experienceLevel: prev.experienceLevel === level ? '' : level, page: 1 }))}
+              >
+                <Text style={[styles.filterChipText, filters.experienceLevel === level && styles.filterChipTextActive]}>{level}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionLabel}>Work Mode</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {filterOptions.workerModes.map((mode) => (
+              <TouchableOpacity
+                key={mode}
+                style={[styles.filterChip, filters.workerMode === mode && styles.filterChipActive]}
+                onPress={() => setFilters(prev => ({ ...prev, workerMode: prev.workerMode === mode ? '' : mode, page: 1 }))}
+              >
+                <Text style={[styles.filterChipText, filters.workerMode === mode && styles.filterChipTextActive]}>{mode}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {(filters.location || filters.experienceLevel || filters.workerMode) && (
+          <TouchableOpacity
+            style={styles.clearFiltersButton}
+            onPress={() => setFilters({ keyword: '', page: 1, limit: 10, location: '', experienceLevel: '', workerMode: '' })}
+          >
+            <Icon name="close" size={16} color="#DC2626" />
+            <Text style={styles.clearFiltersText}>Clear All Filters</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={loading ? styles.scrollContent : undefined}>
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <LottieView
-              source={require('../assets/lottie/loading.lottie')}
-              autoPlay
-              loop
-              style={styles.loadingAnimation}
-            />
+          <View style={styles.section}>
+            {[1, 2, 3].map((i) => (
+              <View key={i} style={styles.skeletonCard}>
+                <View style={styles.skeletonHeader}>
+                  <View style={styles.skeletonLogo} />
+                  <View style={styles.skeletonInfo}>
+                    <View style={styles.skeletonTitle} />
+                    <View style={styles.skeletonSubtitle} />
+                    <View style={styles.skeletonMeta} />
+                  </View>
+                </View>
+                <View style={styles.skeletonTags}>
+                  <View style={styles.skeletonTag} />
+                  <View style={styles.skeletonTag} />
+                  <View style={styles.skeletonTag} />
+                </View>
+                <View style={styles.skeletonFooter}>
+                  <View style={styles.skeletonSalary} />
+                  <View style={styles.skeletonDate} />
+                </View>
+              </View>
+            ))}
           </View>
         ) : jobs.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -332,89 +433,47 @@ export default function HomeScreen({ onJobSelect }: HomeScreenProps) {
           </View>
         )}
       </ScrollView>
-
-      <Modal visible={showFilterModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filters</Text>
-              <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-                <Icon name="close" size={24} color="#1F2937" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.filterScroll}>
-              <Text style={styles.filterLabel}>Location</Text>
-              <TextInput
-                style={styles.filterInput}
-                placeholder="Enter location"
-                value={filters.location}
-                onChangeText={(text) => setFilters(prev => ({ ...prev, location: text, page: 1 }))}
-                placeholderTextColor="#9CA3AF"
-              />
-
-              <Text style={styles.filterLabel}>Experience Level</Text>
-              <TextInput
-                style={styles.filterInput}
-                placeholder="e.g., 0-2, 2-5"
-                value={filters.experienceLevel}
-                onChangeText={(text) => setFilters(prev => ({ ...prev, experienceLevel: text, page: 1 }))}
-                placeholderTextColor="#9CA3AF"
-              />
-
-              <Text style={styles.filterLabel}>Work Mode</Text>
-              <View style={styles.chipContainer}>
-                {['Remote', 'Hybrid', 'On-site'].map((mode) => (
-                  <TouchableOpacity
-                    key={mode}
-                    style={[styles.chip, filters.workerMode === mode && styles.chipActive]}
-                    onPress={() => setFilters(prev => ({ ...prev, workerMode: prev.workerMode === mode ? '' : mode, page: 1 }))}
-                  >
-                    <Text style={[styles.chipText, filters.workerMode === mode && styles.chipTextActive]}>{mode}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={() => setFilters({ keyword: '', page: 1, limit: 10, location: '', experienceLevel: '', workerMode: '' })}
-              >
-                <Text style={styles.clearButtonText}>Clear All</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.applyButton} onPress={() => setShowFilterModal(false)}>
-                <Text style={styles.applyButtonText}>Apply</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { backgroundColor: '#FFFFFF', paddingTop: 50, paddingHorizontal: 20, paddingBottom: 20 },
+  header: { backgroundColor: '#FFFFFF', paddingTop: 50, paddingHorizontal: 20, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   brandContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   brandLogo: { width: 32, height: 32 },
   brandName: { fontSize: 20, fontWeight: 'bold', color: '#DC2626' },
   profileButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   profileImage: { width: 40, height: 40, borderRadius: 20 },
-  searchContainer: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  searchContainer: { flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 12 },
   searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 1, borderWidth: 1.5, borderColor: '#E5E7EB', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   placeholderContainer: { flexDirection: 'row', position: 'absolute', left: 44, pointerEvents: 'none', overflow: 'hidden', height: 20 },
   placeholderStatic: { fontSize: 14, color: '#9CA3AF', fontWeight: '500' },
   placeholderAnimated: { fontSize: 14, color: '#9CA3AF', fontWeight: '500' },
   searchInput: { flex: 1, marginLeft: 10, fontSize: 14, color: '#1F2937', fontWeight: '500' },
-  filterButton: { width: 48, height: 48, backgroundColor: '#DC2626', borderRadius: 12, alignItems: 'center', justifyContent: 'center', shadowColor: '#DC2626', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 },
-  filterBadge: { position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: 4, backgroundColor: '#FBBF24' },
+  filterSection: { marginTop: 12, gap: 8 },
+  filterSectionLabel: { fontSize: 13, fontWeight: '600', color: '#374151', paddingLeft: 4 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB', marginRight: 8 },
+  filterChipActive: { backgroundColor: '#DC2626', borderColor: '#DC2626' },
+  filterChipText: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
+  filterChipTextActive: { color: '#FFFFFF', fontWeight: '600' },
+  clearFiltersButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, marginTop: 4, borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 12 },
+  clearFiltersText: { fontSize: 13, color: '#DC2626', fontWeight: '600' },
   content: { flex: 1, paddingHorizontal: 20 },
-  scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingContainer: { justifyContent: 'center', alignItems: 'center' },
-  loadingAnimation: { width: 100, height: 100 },
+  scrollContent: { paddingTop: 20 },
+  skeletonCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  skeletonHeader: { flexDirection: 'row', marginBottom: 12 },
+  skeletonLogo: { width: 48, height: 48, borderRadius: 8, backgroundColor: '#E5E7EB', marginRight: 12 },
+  skeletonInfo: { flex: 1, gap: 8 },
+  skeletonTitle: { width: '70%', height: 16, backgroundColor: '#E5E7EB', borderRadius: 4 },
+  skeletonSubtitle: { width: '50%', height: 14, backgroundColor: '#E5E7EB', borderRadius: 4 },
+  skeletonMeta: { width: '40%', height: 12, backgroundColor: '#E5E7EB', borderRadius: 4 },
+  skeletonTags: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  skeletonTag: { width: 60, height: 24, backgroundColor: '#E5E7EB', borderRadius: 12 },
+  skeletonFooter: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+  skeletonSalary: { width: 100, height: 16, backgroundColor: '#E5E7EB', borderRadius: 4 },
+  skeletonDate: { width: 60, height: 12, backgroundColor: '#E5E7EB', borderRadius: 4 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 80 },
   lottieAnimation: { width: 200, height: 200 },
   emptyTitle: { fontSize: 20, fontWeight: 'bold', color: '#1F2937', marginTop: -10, marginBottom: 8 },
@@ -444,21 +503,4 @@ const styles = StyleSheet.create({
   jobTypeChip: { backgroundColor: '#DBEAFE', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
   jobTypeText: { fontSize: 10, color: '#1E40AF', fontWeight: '600' },
   posted: { fontSize: 11, color: '#9CA3AF' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1F2937' },
-  filterScroll: { padding: 20 },
-  filterLabel: { fontSize: 14, fontWeight: '600', color: '#1F2937', marginBottom: 8, marginTop: 12 },
-  filterInput: { backgroundColor: '#F3F4F6', borderRadius: 8, padding: 12, fontSize: 16, color: '#1F2937', marginBottom: 8 },
-  chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  chip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB' },
-  chipActive: { backgroundColor: '#DC2626', borderColor: '#DC2626' },
-  chipText: { fontSize: 14, color: '#6B7280' },
-  chipTextActive: { color: '#FFFFFF', fontWeight: '600' },
-  modalFooter: { flexDirection: 'row', padding: 20, gap: 12, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
-  clearButton: { flex: 1, padding: 14, borderRadius: 8, backgroundColor: '#F3F4F6', alignItems: 'center' },
-  clearButtonText: { fontSize: 16, fontWeight: '600', color: '#6B7280' },
-  applyButton: { flex: 1, padding: 14, borderRadius: 8, backgroundColor: '#DC2626', alignItems: 'center' },
-  applyButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
 });

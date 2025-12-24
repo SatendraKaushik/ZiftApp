@@ -10,7 +10,7 @@ interface BottomNavProps {
 export default function BottomNav({ activeTab, onTabPress }: BottomNavProps) {
   const tabs = [
     { id: 'home', label: 'Home', icon: 'home' },
-    { id: 'search', label: 'Search', icon: 'search' },
+    { id: 'saved', label: 'Saved', icon: 'bookmark' },
     { id: 'applied', label: 'Applied', icon: 'work' },
     { id: 'profile', label: 'Profile', icon: 'person' },
   ];

@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, BackHandler } from 'react-native';
 import HomeScreen from '../screens/HomeScreen';
 import JobDetailScreen from '../screens/JobDetailScreen';
 import AppliedJobsScreen from '../screens/AppliedJobsScreen';
 import ApplicationDetailScreen from '../screens/ApplicationDetailScreen';
+import SavedJobsScreen from '../screens/SavedJobsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import SettingsScreen from '../screens/profile/SettingsScreen';
+import AnalyticsScreen from '../screens/profile/AnalyticsScreen';
 import BottomNav from '../components/BottomNav';
 import LoginScreen from './auth/LoginScreen';
 
@@ -21,6 +23,19 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (selectedJobId || selectedApplicationId || showSettings || editingUser || showAnalytics) {
+        handleBackToHome();
+        return true;
+      }
+      return false;
+    });
+
+    return () => backHandler.remove();
+  }, [selectedJobId, selectedApplicationId, showSettings, editingUser, showAnalytics]);
 
   const handleJobSelect = (jobId: string) => {
     setSelectedJobId(jobId);
@@ -37,10 +52,15 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
     setSelectedApplicationId(null);
     setShowSettings(false);
     setEditingUser(null);
+    setShowAnalytics(false);
   };
 
   const handleNavigateToApplied = () => {
     setActiveTab('applied');
+  };
+
+  const handleNavigateToProfile = () => {
+    setActiveTab('profile');
   };
 
   const handleNavigateToSettings = () => {
@@ -49,6 +69,10 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
 
   const handleNavigateToEditProfile = (userData: any) => {
     setEditingUser(userData);
+  };
+
+  const handleNavigateToAnalytics = () => {
+    setShowAnalytics(true);
   };
 
   const handleProfileUpdate = () => {
@@ -74,6 +98,10 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
       return <SettingsScreen onBack={handleBackToHome} onLogout={onLogout} />;
     }
 
+    if (showAnalytics) {
+      return <AnalyticsScreen onBack={handleBackToHome} />;
+    }
+
     if (editingUser) {
       return (
         <EditProfileScreen
@@ -86,9 +114,9 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
 
     switch (activeTab) {
       case 'home':
-        return <HomeScreen onJobSelect={handleJobSelect} />;
-      case 'search':
-        return <LoginScreen />;
+        return <HomeScreen onJobSelect={handleJobSelect} onNavigateToProfile={handleNavigateToProfile} />;
+      case 'saved':
+        return <SavedJobsScreen onJobSelect={handleJobSelect} />;
       case 'applied':
         return <AppliedJobsScreen onJobSelect={handleJobSelect} onApplicationSelect={handleApplicationSelect} />;
       case 'profile':
@@ -97,17 +125,18 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
             onNavigateToApplied={handleNavigateToApplied}
             onNavigateToSettings={handleNavigateToSettings}
             onNavigateToEditProfile={handleNavigateToEditProfile}
+            onNavigateToAnalytics={handleNavigateToAnalytics}
           />
         );
       default:
-        return <HomeScreen onJobSelect={handleJobSelect} />;
+        return <HomeScreen onJobSelect={handleJobSelect} onNavigateToProfile={handleNavigateToProfile} />;
     }
   };
 
   return (
     <View style={styles.container}>
       {renderScreen()}
-      {!selectedJobId && !selectedApplicationId && !showSettings && !editingUser && <BottomNav activeTab={activeTab} onTabPress={setActiveTab} />}
+      {!selectedJobId && !selectedApplicationId && !showSettings && !editingUser && !showAnalytics && <BottomNav activeTab={activeTab} onTabPress={setActiveTab} />}
     </View>
   );
 }
