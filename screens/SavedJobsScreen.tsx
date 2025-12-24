@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LottieView from 'lottie-react-native';
 import Axios from '../libs/Axios';
@@ -28,6 +29,7 @@ interface SavedJobsScreenProps {
 }
 
 export default function SavedJobsScreen({ onJobSelect }: SavedJobsScreenProps) {
+  const insets = useSafeAreaInsets();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -81,11 +83,12 @@ export default function SavedJobsScreen({ onJobSelect }: SavedJobsScreenProps) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Saved Jobs</Text>
-        <Text style={styles.headerSubtitle}>{jobs.length} jobs saved</Text>
+        <Text style={styles.headerSubtitle}>{jobs.length} jobs</Text>
       </View>
 
       <ScrollView
         style={styles.content}
+        contentContainerStyle={[jobs.length === 0 ? styles.emptyScrollContent : { paddingBottom: insets.bottom }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {jobs.length === 0 ? (
@@ -163,11 +166,12 @@ export default function SavedJobsScreen({ onJobSelect }: SavedJobsScreenProps) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  headerTitle: { fontSize: 28, fontWeight: '700', color: '#1F2937', marginBottom: 4 },
-  headerSubtitle: { fontSize: 14, color: '#6B7280' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: '#1F2937' },
+  headerSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
   content: { flex: 1 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 80 },
+  emptyScrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyContainer: { justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
   lottieAnimation: { width: 200, height: 200 },
   emptyTitle: { fontSize: 20, fontWeight: 'bold', color: '#1F2937', marginTop: -10, marginBottom: 8 },
   emptyText: { fontSize: 14, color: '#6B7280' },

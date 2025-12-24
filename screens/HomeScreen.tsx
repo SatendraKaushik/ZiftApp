@@ -12,9 +12,11 @@ import {
   Modal,
   Animated,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LottieView from 'lottie-react-native';
 import Axios from '../libs/Axios';
+import ShowcaseCarousel from '../components/ShowcaseCarousel';
 
 interface Job {
   _id: string;
@@ -50,6 +52,7 @@ interface HomeScreenProps {
 }
 
 export default function HomeScreen({ onJobSelect, onNavigateToProfile }: HomeScreenProps) {
+  const insets = useSafeAreaInsets();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -57,6 +60,9 @@ export default function HomeScreen({ onJobSelect, onNavigateToProfile }: HomeScr
   const [userAvatar, setUserAvatar] = useState('');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [bookmarkedJobs, setBookmarkedJobs] = useState<Set<string>>(new Set());
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [showExperienceDropdown, setShowExperienceDropdown] = useState(false);
+  const [showWorkModeDropdown, setShowWorkModeDropdown] = useState(false);
   const [filterOptions, setFilterOptions] = useState<{
     locations: string[];
     experienceLevels: string[];
@@ -296,7 +302,10 @@ export default function HomeScreen({ onJobSelect, onNavigateToProfile }: HomeScr
         <View style={styles.headerTop}>
           <View style={styles.brandContainer}>
             <Image source={require('../components/assests/zift/ziftlogo.png')} style={styles.brandLogo} />
-            <Text style={styles.brandName}>ZiftJobs</Text>
+            <View>
+              <Text style={styles.brandName}>TheZift</Text>
+              <Text style={styles.brandSubscript}>Jobs</Text>
+            </View>
           </View>
           <TouchableOpacity style={styles.profileButton} onPress={onNavigateToProfile}>
             {userAvatar ? (
@@ -310,12 +319,14 @@ export default function HomeScreen({ onJobSelect, onNavigateToProfile }: HomeScr
         <View style={styles.searchContainer}>
           <View style={styles.searchBox}>
             <Icon name="search" size={20} color="#DC2626" />
-            <View style={styles.placeholderContainer}>
-              <Text style={styles.placeholderStatic}>Search by </Text>
-              <Animated.Text style={[styles.placeholderAnimated, { transform: [{ translateY: slideAnim }] }]}>
-                {placeholderTexts[placeholderIndex]}
-              </Animated.Text>
-            </View>
+            {!filters.keyword && (
+              <View style={styles.placeholderContainer}>
+                <Text style={styles.placeholderStatic}>Search by </Text>
+                <Animated.Text style={[styles.placeholderAnimated, { transform: [{ translateY: slideAnim }] }]}>
+                  {placeholderTexts[placeholderIndex]}
+                </Animated.Text>
+              </View>
+            )}
             <TextInput
               style={styles.searchInput}
               placeholder=""
@@ -330,64 +341,117 @@ export default function HomeScreen({ onJobSelect, onNavigateToProfile }: HomeScr
             )}
           </View>
         </View>
+      </View>
 
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionLabel}>Location</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <ScrollView style={styles.content} contentContainerStyle={[loading ? styles.scrollContent : undefined, { paddingBottom: insets.bottom }]}>
+        <ShowcaseCarousel />
+
+        <View style={styles.filterContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersRow} contentContainerStyle={styles.filtersRowContent}>
+          <TouchableOpacity
+            style={[styles.filterDropdownBtn, filters.location && styles.filterDropdownBtnActive]}
+            onPress={() => setShowLocationDropdown(!showLocationDropdown)}
+          >
+            <Icon name="location-on" size={14} color={filters.location ? "#FFFFFF" : "#6B7280"} />
+            <Text style={[styles.filterBtnText, filters.location && styles.filterBtnTextActive]}>
+              {filters.location || 'Location'}
+            </Text>
+            <Icon name={showLocationDropdown ? "expand-less" : "expand-more"} size={16} color={filters.location ? "#FFFFFF" : "#6B7280"} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.filterDropdownBtn, filters.experienceLevel && styles.filterDropdownBtnActive]}
+            onPress={() => setShowExperienceDropdown(!showExperienceDropdown)}
+          >
+            <Icon name="work-outline" size={14} color={filters.experienceLevel ? "#FFFFFF" : "#6B7280"} />
+            <Text style={[styles.filterBtnText, filters.experienceLevel && styles.filterBtnTextActive]}>
+              {filters.experienceLevel ? `${filters.experienceLevel}y` : 'Experience'}
+            </Text>
+            <Icon name={showExperienceDropdown ? "expand-less" : "expand-more"} size={16} color={filters.experienceLevel ? "#FFFFFF" : "#6B7280"} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.filterDropdownBtn, filters.workerMode && styles.filterDropdownBtnActive]}
+            onPress={() => setShowWorkModeDropdown(!showWorkModeDropdown)}
+          >
+            <Icon name="home-work" size={14} color={filters.workerMode ? "#FFFFFF" : "#6B7280"} />
+            <Text style={[styles.filterBtnText, filters.workerMode && styles.filterBtnTextActive]}>
+              {filters.workerMode || 'Work Mode'}
+            </Text>
+            <Icon name={showWorkModeDropdown ? "expand-less" : "expand-more"} size={16} color={filters.workerMode ? "#FFFFFF" : "#6B7280"} />
+          </TouchableOpacity>
+
+          {(filters.location || filters.experienceLevel || filters.workerMode) && (
+            <TouchableOpacity
+              style={styles.clearFilterChip}
+              onPress={() => {
+                setFilters({ keyword: '', page: 1, limit: 10, location: '', experienceLevel: '', workerMode: '' });
+                setShowLocationDropdown(false);
+                setShowExperienceDropdown(false);
+                setShowWorkModeDropdown(false);
+              }}
+            >
+              <Icon name="close" size={14} color="#DC2626" />
+              <Text style={styles.clearFilterChipText}>Clear</Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+
+        {showLocationDropdown && (
+          <ScrollView style={styles.dropdown} nestedScrollEnabled>
             {filterOptions.locations.map((location) => (
               <TouchableOpacity
                 key={location}
-                style={[styles.filterChip, filters.location === location && styles.filterChipActive]}
-                onPress={() => setFilters(prev => ({ ...prev, location: prev.location === location ? '' : location, page: 1 }))}
+                style={[styles.dropdownItem, filters.location === location && styles.dropdownItemActive]}
+                onPress={() => {
+                  setFilters(prev => ({ ...prev, location: prev.location === location ? '' : location, page: 1 }));
+                  setShowLocationDropdown(false);
+                }}
               >
-                <Text style={[styles.filterChipText, filters.location === location && styles.filterChipTextActive]}>{location}</Text>
+                <Text style={[styles.dropdownItemText, filters.location === location && styles.dropdownItemTextActive]}>{location}</Text>
+                {filters.location === location && <Icon name="check" size={16} color="#DC2626" />}
               </TouchableOpacity>
             ))}
           </ScrollView>
-        </View>
+        )}
 
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionLabel}>Experience</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {showExperienceDropdown && (
+          <ScrollView style={styles.dropdown} nestedScrollEnabled>
             {filterOptions.experienceLevels.map((level) => (
               <TouchableOpacity
                 key={level}
-                style={[styles.filterChip, filters.experienceLevel === level && styles.filterChipActive]}
-                onPress={() => setFilters(prev => ({ ...prev, experienceLevel: prev.experienceLevel === level ? '' : level, page: 1 }))}
+                style={[styles.dropdownItem, filters.experienceLevel === level && styles.dropdownItemActive]}
+                onPress={() => {
+                  setFilters(prev => ({ ...prev, experienceLevel: prev.experienceLevel === level ? '' : level, page: 1 }));
+                  setShowExperienceDropdown(false);
+                }}
               >
-                <Text style={[styles.filterChipText, filters.experienceLevel === level && styles.filterChipTextActive]}>{level}</Text>
+                <Text style={[styles.dropdownItemText, filters.experienceLevel === level && styles.dropdownItemTextActive]}>{level} years</Text>
+                {filters.experienceLevel === level && <Icon name="check" size={16} color="#DC2626" />}
               </TouchableOpacity>
             ))}
           </ScrollView>
-        </View>
+        )}
 
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionLabel}>Work Mode</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {showWorkModeDropdown && (
+          <ScrollView style={styles.dropdown} nestedScrollEnabled>
             {filterOptions.workerModes.map((mode) => (
               <TouchableOpacity
                 key={mode}
-                style={[styles.filterChip, filters.workerMode === mode && styles.filterChipActive]}
-                onPress={() => setFilters(prev => ({ ...prev, workerMode: prev.workerMode === mode ? '' : mode, page: 1 }))}
+                style={[styles.dropdownItem, filters.workerMode === mode && styles.dropdownItemActive]}
+                onPress={() => {
+                  setFilters(prev => ({ ...prev, workerMode: prev.workerMode === mode ? '' : mode, page: 1 }));
+                  setShowWorkModeDropdown(false);
+                }}
               >
-                <Text style={[styles.filterChipText, filters.workerMode === mode && styles.filterChipTextActive]}>{mode}</Text>
+                <Text style={[styles.dropdownItemText, filters.workerMode === mode && styles.dropdownItemTextActive]}>{mode}</Text>
+                {filters.workerMode === mode && <Icon name="check" size={16} color="#DC2626" />}
               </TouchableOpacity>
             ))}
           </ScrollView>
+        )}
         </View>
 
-        {(filters.location || filters.experienceLevel || filters.workerMode) && (
-          <TouchableOpacity
-            style={styles.clearFiltersButton}
-            onPress={() => setFilters({ keyword: '', page: 1, limit: 10, location: '', experienceLevel: '', workerMode: '' })}
-          >
-            <Icon name="close" size={16} color="#DC2626" />
-            <Text style={styles.clearFiltersText}>Clear All Filters</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <ScrollView style={styles.content} contentContainerStyle={loading ? styles.scrollContent : undefined}>
         {loading ? (
           <View style={styles.section}>
             {[1, 2, 3].map((i) => (
@@ -429,7 +493,13 @@ export default function HomeScreen({ onJobSelect, onNavigateToProfile }: HomeScr
               <Text style={styles.sectionTitle}>Available Jobs</Text>
               <TouchableOpacity><Text style={styles.seeAll}>See All</Text></TouchableOpacity>
             </View>
-            <FlatList data={jobs} renderItem={renderJobCard} keyExtractor={(item) => item._id} scrollEnabled={false} />
+            <FlatList 
+              data={jobs} 
+              renderItem={renderJobCard} 
+              keyExtractor={(item) => item._id} 
+              scrollEnabled={false}
+              contentContainerStyle={styles.flatListContent}
+            />
           </View>
         )}
       </ScrollView>
@@ -439,28 +509,35 @@ export default function HomeScreen({ onJobSelect, onNavigateToProfile }: HomeScr
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { backgroundColor: '#FFFFFF', paddingTop: 50, paddingHorizontal: 20, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  header: { backgroundColor: '#FFFFFF', paddingTop: 50, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  brandContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  brandLogo: { width: 32, height: 32 },
-  brandName: { fontSize: 20, fontWeight: 'bold', color: '#DC2626' },
+  brandContainer: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  brandLogo: { width: 32, height: 32, marginTop: 2 },
+  brandName: { fontSize: 20, fontWeight: 'bold', color: '#DC2626', marginTop: 2 },
+  brandSubscript: { fontSize: 10, color: '#6B7280', marginTop: -4 },
   profileButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   profileImage: { width: 40, height: 40, borderRadius: 20 },
-  searchContainer: { flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 12 },
+  searchContainer: { flexDirection: 'row', gap: 10, marginTop: 8 },
   searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 1, borderWidth: 1.5, borderColor: '#E5E7EB', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   placeholderContainer: { flexDirection: 'row', position: 'absolute', left: 44, pointerEvents: 'none', overflow: 'hidden', height: 20 },
   placeholderStatic: { fontSize: 14, color: '#9CA3AF', fontWeight: '500' },
   placeholderAnimated: { fontSize: 14, color: '#9CA3AF', fontWeight: '500' },
   searchInput: { flex: 1, marginLeft: 10, fontSize: 14, color: '#1F2937', fontWeight: '500' },
-  filterSection: { marginTop: 12, gap: 8 },
-  filterSectionLabel: { fontSize: 13, fontWeight: '600', color: '#374151', paddingLeft: 4 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB', marginRight: 8 },
-  filterChipActive: { backgroundColor: '#DC2626', borderColor: '#DC2626' },
-  filterChipText: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
-  filterChipTextActive: { color: '#FFFFFF', fontWeight: '600' },
-  clearFiltersButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, marginTop: 4, borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 12 },
-  clearFiltersText: { fontSize: 13, color: '#DC2626', fontWeight: '600' },
-  content: { flex: 1, paddingHorizontal: 20 },
+  filterContainer: { backgroundColor: '#F9FAFB', paddingTop: 12 },
+  filtersRow: { marginBottom: 8, marginHorizontal: -20 },
+  filtersRowContent: { paddingHorizontal: 20 },
+  filterDropdownBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB', marginRight: 8 },
+  filterDropdownBtnActive: { backgroundColor: '#DC2626', borderColor: '#DC2626' },
+  filterBtnText: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
+  filterBtnTextActive: { color: '#FFFFFF', fontWeight: '600' },
+  dropdown: { maxHeight: 200, backgroundColor: '#FFFFFF', borderRadius: 12, marginTop: 4, marginBottom: 8, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  dropdownItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  dropdownItemActive: { backgroundColor: '#FEF2F2' },
+  dropdownItemText: { fontSize: 13, color: '#1F2937', fontWeight: '500' },
+  dropdownItemTextActive: { color: '#DC2626', fontWeight: '600' },
+  clearFilterChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FCA5A5', marginRight: 8 },
+  clearFilterChipText: { fontSize: 12, color: '#DC2626', fontWeight: '600' },
+  content: { flex: 1 },
   scrollContent: { paddingTop: 20 },
   skeletonCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   skeletonHeader: { flexDirection: 'row', marginBottom: 12 },
@@ -474,15 +551,15 @@ const styles = StyleSheet.create({
   skeletonFooter: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
   skeletonSalary: { width: 100, height: 16, backgroundColor: '#E5E7EB', borderRadius: 4 },
   skeletonDate: { width: 60, height: 12, backgroundColor: '#E5E7EB', borderRadius: 4 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 80 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 80, paddingHorizontal: 20 },
   lottieAnimation: { width: 200, height: 200 },
   emptyTitle: { fontSize: 20, fontWeight: 'bold', color: '#1F2937', marginTop: -10, marginBottom: 8 },
   emptyText: { fontSize: 14, color: '#6B7280', textAlign: 'center', paddingHorizontal: 40 },
-  section: { marginVertical: 20 },
+  section: { marginVertical: 20, paddingHorizontal: 20 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F2937' },
   seeAll: { fontSize: 14, color: '#DC2626', fontWeight: '500' },
-  jobCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  jobCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, marginBottom: 12, marginHorizontal: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   jobHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
   companyLogo: { width: 48, height: 48, borderRadius: 8, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   companyLogoImage: { width: 48, height: 48, borderRadius: 8, marginRight: 12, backgroundColor: '#F3F4F6' },
@@ -503,4 +580,5 @@ const styles = StyleSheet.create({
   jobTypeChip: { backgroundColor: '#DBEAFE', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
   jobTypeText: { fontSize: 10, color: '#1E40AF', fontWeight: '600' },
   posted: { fontSize: 11, color: '#9CA3AF' },
+  flatListContent: { paddingHorizontal: 0 },
 });

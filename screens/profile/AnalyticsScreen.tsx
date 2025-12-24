@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Axios from '../../libs/Axios';
 
@@ -47,6 +48,7 @@ interface ZiftDifficultyStats {
 }
 
 export default function AnalyticsScreen({ onBack }: { onBack: () => void }) {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [ziftStats, setZiftStats] = useState<ZiftStats | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
@@ -91,7 +93,7 @@ export default function AnalyticsScreen({ onBack }: { onBack: () => void }) {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: insets.bottom }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
           <Icon name="arrow-back" size={24} color="#1F2937" />

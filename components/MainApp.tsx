@@ -9,6 +9,8 @@ import ProfileScreen from '../screens/profile/ProfileScreen';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import SettingsScreen from '../screens/profile/SettingsScreen';
 import AnalyticsScreen from '../screens/profile/AnalyticsScreen';
+import PrivacyPolicyScreen from '../screens/profile/PrivacyPolicyScreen';
+import TermsConditionsScreen from '../screens/profile/TermsConditionsScreen';
 import BottomNav from '../components/BottomNav';
 import LoginScreen from './auth/LoginScreen';
 
@@ -19,23 +21,41 @@ interface MainAppProps {
 
 export default function MainApp({ user, onLogout }: MainAppProps) {
   const [activeTab, setActiveTab] = useState('home');
+  const [navigationHistory, setNavigationHistory] = useState<string[]>(['home']);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showTermsConditions, setShowTermsConditions] = useState(false);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (selectedJobId || selectedApplicationId || showSettings || editingUser || showAnalytics) {
+      if (selectedJobId || selectedApplicationId || showSettings || editingUser || showAnalytics || showPrivacyPolicy || showTermsConditions) {
         handleBackToHome();
+        return true;
+      }
+      if (navigationHistory.length > 1) {
+        const newHistory = [...navigationHistory];
+        newHistory.pop();
+        const previousTab = newHistory[newHistory.length - 1];
+        setNavigationHistory(newHistory);
+        setActiveTab(previousTab);
         return true;
       }
       return false;
     });
 
     return () => backHandler.remove();
-  }, [selectedJobId, selectedApplicationId, showSettings, editingUser, showAnalytics]);
+  }, [selectedJobId, selectedApplicationId, showSettings, editingUser, showAnalytics, showPrivacyPolicy, showTermsConditions, navigationHistory]);
+
+  const handleTabChange = (tab: string) => {
+    if (tab !== activeTab) {
+      setNavigationHistory([...navigationHistory, tab]);
+    }
+    setActiveTab(tab);
+  };
 
   const handleJobSelect = (jobId: string) => {
     setSelectedJobId(jobId);
@@ -53,6 +73,14 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
     setShowSettings(false);
     setEditingUser(null);
     setShowAnalytics(false);
+    setShowPrivacyPolicy(false);
+    setShowTermsConditions(false);
+  };
+
+  const handleBackToSettings = () => {
+    setShowPrivacyPolicy(false);
+    setShowTermsConditions(false);
+    setShowSettings(true);
   };
 
   const handleNavigateToApplied = () => {
@@ -75,6 +103,18 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
     setShowAnalytics(true);
   };
 
+  const handleNavigateToPrivacyPolicy = () => {
+    console.log('handleNavigateToPrivacyPolicy called');
+    setShowSettings(false);
+    setShowPrivacyPolicy(true);
+  };
+
+  const handleNavigateToTermsConditions = () => {
+    console.log('handleNavigateToTermsConditions called');
+    setShowSettings(false);
+    setShowTermsConditions(true);
+  };
+
   const handleProfileUpdate = () => {
     setActiveTab('profile');
   };
@@ -95,11 +135,19 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
     }
 
     if (showSettings) {
-      return <SettingsScreen onBack={handleBackToHome} onLogout={onLogout} />;
+      return <SettingsScreen onBack={handleBackToHome} onLogout={onLogout} onNavigateToPrivacy={handleNavigateToPrivacyPolicy} onNavigateToTerms={handleNavigateToTermsConditions} />;
     }
 
     if (showAnalytics) {
       return <AnalyticsScreen onBack={handleBackToHome} />;
+    }
+
+    if (showPrivacyPolicy) {
+      return <PrivacyPolicyScreen onBack={handleBackToSettings} />;
+    }
+
+    if (showTermsConditions) {
+      return <TermsConditionsScreen onBack={handleBackToSettings} />;
     }
 
     if (editingUser) {
@@ -136,7 +184,7 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
   return (
     <View style={styles.container}>
       {renderScreen()}
-      {!selectedJobId && !selectedApplicationId && !showSettings && !editingUser && !showAnalytics && <BottomNav activeTab={activeTab} onTabPress={setActiveTab} />}
+      {!selectedJobId && !selectedApplicationId && !showSettings && !editingUser && !showAnalytics && !showPrivacyPolicy && !showTermsConditions && <BottomNav activeTab={activeTab} onTabPress={handleTabChange} />}
     </View>
   );
 }

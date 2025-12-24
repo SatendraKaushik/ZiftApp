@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LottieView from 'lottie-react-native';
 import Axios from '../libs/Axios';
 
 interface Application {
@@ -35,6 +37,7 @@ interface AppliedJobsScreenProps {
 }
 
 export default function AppliedJobsScreen({ onJobSelect, onApplicationSelect }: AppliedJobsScreenProps) {
+  const insets = useSafeAreaInsets();
   const [applications, setApplications] = useState<Application[]>([]);
   const [stats, setStats] = useState<ApplicationStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,10 +75,10 @@ export default function AppliedJobsScreen({ onJobSelect, onApplicationSelect }: 
   const getProgressColor = (progress: string) => {
     if (!progress) return '#6B7280';
     const colors: Record<string, string> = {
-      'APPLIED': '#3B82F6',
+      'APPLIED': '#DC2626',
       'UNDER_REVIEW': '#F59E0B',
-      'INTERVIEW_SCHEDULED': '#8B5CF6',
-      'INTERVIEW_COMPLETED': '#6366F1',
+      'INTERVIEW_SCHEDULED': '#DC2626',
+      'INTERVIEW_COMPLETED': '#DC2626',
       'SELECTED': '#10B981',
       'REJECTED': '#EF4444',
       'WITHDRAWN': '#6B7280'
@@ -94,37 +97,34 @@ export default function AppliedJobsScreen({ onJobSelect, onApplicationSelect }: 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1F2937" />
+        <ActivityIndicator size="large" color="#DC2626" />
       </View>
     );
   }
 
   const statsCards = [
-    { title: 'Total', value: stats?.totalApplications || 0, icon: 'description', color: '#3B82F6' },
-    { title: 'In Review', value: stats?.inReview || 0, icon: 'pending', color: '#F59E0B' },
-    { title: 'Interviewed', value: stats?.interviewed || 0, icon: 'people', color: '#8B5CF6' },
-    { title: 'Offered', value: stats?.offered || 0, icon: 'check-circle', color: '#10B981' },
+    { title: 'Total', value: stats?.totalApplications || 0, color: '#DC2626', bgColor: '#FEF2F2' },
+    { title: 'Review', value: stats?.inReview || 0, color: '#F59E0B', bgColor: '#FEF3C7' },
+    { title: 'Interview', value: stats?.interviewed || 0, color: '#8B5CF6', bgColor: '#F3E8FF' },
+    { title: 'Offered', value: stats?.offered || 0, color: '#10B981', bgColor: '#D1FAE5' },
   ];
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Applications</Text>
-        <Text style={styles.headerSubtitle}>Track your job applications</Text>
       </View>
 
       <ScrollView 
         style={styles.content}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <View style={styles.statsContainer}>
           {statsCards.map((stat, index) => (
-            <View key={index} style={styles.statCard}>
-              <View style={[styles.statIconContainer, { backgroundColor: stat.color + '20' }]}>
-                <Icon name={stat.icon} size={20} color={stat.color} />
-              </View>
-              <Text style={styles.statValue}>{stat.value}</Text>
+            <View key={index} style={[styles.statCard, { backgroundColor: stat.bgColor }]}>
+              <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
               <Text style={styles.statLabel}>{stat.title}</Text>
             </View>
           ))}
@@ -132,9 +132,14 @@ export default function AppliedJobsScreen({ onJobSelect, onApplicationSelect }: 
 
         {applications.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Icon name="work-outline" size={64} color="#D1D5DB" />
+            <LottieView
+              source={require('../assets/lottie/empty.lottie')}
+              autoPlay
+              loop
+              style={styles.lottieAnimation}
+            />
             <Text style={styles.emptyTitle}>No Applications Yet</Text>
-            <Text style={styles.emptyText}>You haven't applied to any jobs yet</Text>
+            <Text style={styles.emptyText}>Start applying to jobs and track your progress here</Text>
           </View>
         ) : (
           <View style={styles.applicationsContainer}>
@@ -202,16 +207,15 @@ export default function AppliedJobsScreen({ onJobSelect, onApplicationSelect }: 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  headerTitle: { fontSize: 28, fontWeight: '700', color: '#1F2937', marginBottom: 4 },
-  headerSubtitle: { fontSize: 14, color: '#6B7280' },
+  header: { backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  headerTitle: { fontSize: 22, fontWeight: 'bold', color: '#DC2626' },
   content: { flex: 1 },
-  statsContainer: { flexDirection: 'row', padding: 16, gap: 12 },
-  statCard: { flex: 1, backgroundColor: '#FFFFFF', padding: 12, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
-  statIconContainer: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  statValue: { fontSize: 20, fontWeight: '700', color: '#1F2937', marginBottom: 2 },
-  statLabel: { fontSize: 11, color: '#6B7280', textAlign: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 80 },
+  statsContainer: { flexDirection: 'row', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12, gap: 8 },
+  statCard: { flex: 1, paddingVertical: 14, paddingHorizontal: 8, borderRadius: 12, alignItems: 'center' },
+  statValue: { fontSize: 22, fontWeight: 'bold', marginBottom: 2 },
+  statLabel: { fontSize: 9, color: '#6B7280', fontWeight: '600' },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60, paddingHorizontal: 20 },
+  lottieAnimation: { width: 200, height: 200, marginBottom: -20 },
   emptyTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937', marginTop: 16, marginBottom: 8 },
   emptyText: { fontSize: 14, color: '#6B7280' },
   applicationsContainer: { padding: 16, gap: 12 },
@@ -226,8 +230,8 @@ const styles = StyleSheet.create({
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
   dateContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   dateText: { fontSize: 12, color: '#9CA3AF' },
-  interviewBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  interviewText: { fontSize: 11, color: '#6366F1', fontWeight: '500' },
-  statusBadge: { position: 'absolute', top: 16, right: 16, backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#E5E7EB' },
+  interviewBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEF2F2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  interviewText: { fontSize: 11, color: '#DC2626', fontWeight: '500' },
+  statusBadge: { position: 'absolute', top: 16, right: 16, backgroundColor: '#FEF2F2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   statusText: { fontSize: 10, color: '#374151', fontWeight: '600' },
 });

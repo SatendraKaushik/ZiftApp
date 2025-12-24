@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Switch, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Axios from '../../libs/Axios';
 
@@ -10,10 +11,23 @@ interface EditProfileScreenProps {
 }
 
 export default function EditProfileScreen({ user, onBack, onUpdate }: EditProfileScreenProps) {
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState(user.name || '');
   const [phoneNumber, setPhoneNumber] = useState(user.phoneNumber || '');
   const [makeprofilepublic, setMakeProfilePublic] = useState(user.makeprofilepublic || false);
   const [saving, setSaving] = useState(false);
+
+  const handleTogglePublicProfile = (value: boolean) => {
+    if (value && (!phoneNumber || !user.isResumeUploaded)) {
+      Alert.alert(
+        'Profile Incomplete',
+        'Please add phone number and upload resume before making your profile public.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    setMakeProfilePublic(value);
+  };
 
   const handleSave = async () => {
     try {
@@ -44,7 +58,7 @@ export default function EditProfileScreen({ user, onBack, onUpdate }: EditProfil
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom }}>
         <View style={styles.section}>
           <Text style={styles.label}>Full Name</Text>
           <View style={styles.inputContainer}>
@@ -94,7 +108,7 @@ export default function EditProfileScreen({ user, onBack, onUpdate }: EditProfil
             </View>
             <Switch
               value={makeprofilepublic}
-              onValueChange={setMakeProfilePublic}
+              onValueChange={handleTogglePublicProfile}
               trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
               thumbColor={makeprofilepublic ? '#3B82F6' : '#F3F4F6'}
             />

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 interface BottomNavProps {
@@ -8,6 +9,7 @@ interface BottomNavProps {
 }
 
 export default function BottomNav({ activeTab, onTabPress }: BottomNavProps) {
+  const insets = useSafeAreaInsets();
   const tabs = [
     { id: 'home', label: 'Home', icon: 'home' },
     { id: 'saved', label: 'Saved', icon: 'bookmark' },
@@ -16,7 +18,7 @@ export default function BottomNav({ activeTab, onTabPress }: BottomNavProps) {
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       {tabs.map((tab) => (
         <TouchableOpacity
           key={tab.id}

@@ -52,7 +52,10 @@ function App() {
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        <StatusBar 
+          barStyle="dark-content"
+          backgroundColor="#FFFFFF"
+        />
         {isAuthenticated ? (
           <MainApp user={user} onLogout={handleLogout} />
         ) : (

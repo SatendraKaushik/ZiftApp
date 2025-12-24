@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Linking, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Axios from '../libs/Axios';
 
@@ -58,6 +59,7 @@ interface ApplicationDetailScreenProps {
 }
 
 export default function ApplicationDetailScreen({ applicationId, onBack, onViewJob }: ApplicationDetailScreenProps) {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [application, setApplication] = useState<Application | null>(null);
   const [stages, setStages] = useState<Stage[]>([]);
@@ -108,8 +110,8 @@ export default function ApplicationDetailScreen({ applicationId, onBack, onViewJ
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      'APPLIED': '#3B82F6',
-      'IN_INTERVIEW': '#8B5CF6',
+      'APPLIED': '#DC2626',
+      'IN_INTERVIEW': '#F59E0B',
       'SHORTLISTED': '#10B981',
       'HIRED': '#059669',
       'REJECTED': '#EF4444'
@@ -120,7 +122,7 @@ export default function ApplicationDetailScreen({ applicationId, onBack, onViewJ
   const getStageStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       'PASSED': '#10B981',
-      'IN_PROGRESS': '#3B82F6',
+      'IN_PROGRESS': '#DC2626',
       'PENDING': '#6B7280',
       'REJECTED': '#EF4444'
     };
@@ -130,7 +132,7 @@ export default function ApplicationDetailScreen({ applicationId, onBack, onViewJ
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1F2937" />
+        <ActivityIndicator size="large" color="#DC2626" />
       </View>
     );
   }
@@ -150,16 +152,16 @@ export default function ApplicationDetailScreen({ applicationId, onBack, onViewJ
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
+          <Icon name="arrow-back" size={24} color="#DC2626" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Application Details</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom }}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Icon name="business" size={20} color="#374151" />
+            <Icon name="business" size={20} color="#DC2626" />
             <Text style={styles.sectionTitle}>Job Information</Text>
           </View>
           
@@ -192,7 +194,7 @@ export default function ApplicationDetailScreen({ applicationId, onBack, onViewJ
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Icon name="description" size={20} color="#374151" />
+            <Icon name="description" size={20} color="#DC2626" />
             <Text style={styles.sectionTitle}>Application Status</Text>
           </View>
 
@@ -230,7 +232,7 @@ export default function ApplicationDetailScreen({ applicationId, onBack, onViewJ
                 <View key={index} style={styles.stageCard}>
                   <View style={styles.stageLeft}>
                     <View style={[styles.stageIndicator, {
-                      backgroundColor: application.status === 'REJECTED' && !stage.isPastStage ? '#EF4444' : stage.isCurrentStage ? '#3B82F6' : stage.isPastStage ? '#10B981' : '#D1D5DB'
+                      backgroundColor: application.status === 'REJECTED' && !stage.isPastStage ? '#EF4444' : stage.isCurrentStage ? '#DC2626' : stage.isPastStage ? '#10B981' : '#D1D5DB'
                     }]}>
                       {stage.isPastStage ? (
                         <Icon name="check" size={16} color="#FFFFFF" />
@@ -273,7 +275,7 @@ export default function ApplicationDetailScreen({ applicationId, onBack, onViewJ
 
                       {stage.interview?.meetingLink && !stage.isPastStage && application.status !== 'REJECTED' && (
                         <TouchableOpacity style={styles.meetingLinkButton} onPress={() => Linking.openURL(stage.interview!.meetingLink!)}>
-                          <Icon name="videocam" size={16} color="#3B82F6" />
+                          <Icon name="videocam" size={16} color="#DC2626" />
                           <Text style={styles.meetingLinkText}>Join Meeting</Text>
                         </TouchableOpacity>
                       )}
@@ -294,7 +296,7 @@ export default function ApplicationDetailScreen({ applicationId, onBack, onViewJ
         {application.profileLink && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="link" size={20} color="#374151" />
+              <Icon name="link" size={20} color="#DC2626" />
               <Text style={styles.sectionTitle}>Profile Link</Text>
             </View>
             <Text style={styles.profileLinkDesc}>View your submitted profile for this application</Text>
@@ -316,11 +318,11 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   errorText: { fontSize: 16, color: '#6B7280', marginBottom: 16 },
-  backButton: { backgroundColor: '#1F2937', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
+  backButton: { backgroundColor: '#DC2626', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   backButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 50, paddingBottom: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
   backBtn: { padding: 8 },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937' },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#DC2626' },
   content: { flex: 1 },
   section: { backgroundColor: '#FFFFFF', padding: 20, marginTop: 8 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
@@ -329,7 +331,7 @@ const styles = StyleSheet.create({
   jobDetails: { gap: 12, marginBottom: 16 },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   detailText: { fontSize: 14, color: '#4B5563' },
-  viewJobButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1F2937', paddingVertical: 12, borderRadius: 8 },
+  viewJobButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#DC2626', paddingVertical: 12, borderRadius: 8 },
   viewJobButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
   statusContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
@@ -358,7 +360,7 @@ const styles = StyleSheet.create({
   stageDetailText: { fontSize: 12, color: '#6B7280' },
   cancelledText: { fontSize: 12, color: '#EF4444', fontWeight: '500' },
   meetingLinkButton: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  meetingLinkText: { fontSize: 12, color: '#3B82F6', fontWeight: '500' },
+  meetingLinkText: { fontSize: 12, color: '#DC2626', fontWeight: '500' },
   interviewTypeBadge: { marginTop: 8, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#D1D5DB' },
   interviewTypeText: { fontSize: 10, color: '#6B7280', fontWeight: '500' },
   profileLinkDesc: { fontSize: 14, color: '#6B7280', marginBottom: 12 },

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Linking, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Axios from '../libs/Axios';
 
@@ -58,6 +59,7 @@ interface JobDetailScreenProps {
 }
 
 export default function JobDetailScreen({ jobId, onBack }: JobDetailScreenProps) {
+  const insets = useSafeAreaInsets();
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
@@ -123,7 +125,7 @@ export default function JobDetailScreen({ jobId, onBack }: JobDetailScreenProps)
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}>
         <View style={styles.jobHeader}>
           {job.postedBy.company?.logo ? (
             <Image source={{ uri: job.postedBy.company.logo }} style={styles.companyLogoImage} />
@@ -337,7 +339,7 @@ export default function JobDetailScreen({ jobId, onBack }: JobDetailScreenProps)
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: 16 + insets.bottom }]}>
         {job.hasApplied ? (
           <View style={styles.appliedContainer}>
             <Icon name="check-circle" size={24} color="#059669" />

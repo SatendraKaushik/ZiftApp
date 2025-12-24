@@ -79,7 +79,7 @@ export default function LoginScreen({ onLoginSuccess, onNavigateToRegister, onNa
 
   const handleGoogleLogin = () => Alert.alert('Google Login', 'Google authentication coming soon');
   const handleGithubLogin = () => Alert.alert('GitHub Login', 'GitHub authentication coming soon');
-
+ // "package_name": "com.ziftapp"
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
