@@ -11,6 +11,7 @@ import {
   Image,
   Modal,
   Animated,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -55,6 +56,7 @@ export default function HomeScreen({ onJobSelect, onNavigateToProfile }: HomeScr
   const insets = useSafeAreaInsets();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [userName, setUserName] = useState('User');
   const [userAvatar, setUserAvatar] = useState('');
@@ -116,10 +118,11 @@ export default function HomeScreen({ onJobSelect, onNavigateToProfile }: HomeScr
     try {
       const { TokenStorage } = await import('../libs/TokenStorage');
       const user = await TokenStorage.getUser();
+      console.log('Loaded user:', user);
       if (user?.name) {
         setUserName(user.name.split(' ')[0]);
       }
-      if (user?.avatar) {
+      if (user?.avatar && user.avatar.trim() !== '') {
         setUserAvatar(user.avatar);
       }
     } catch (error) {
@@ -180,7 +183,14 @@ export default function HomeScreen({ onJobSelect, onNavigateToProfile }: HomeScr
       console.error('Error fetching jobs:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadUserData();
+    fetchJobs();
   };
 
   const handleBookmark = async (jobId: string) => {
@@ -308,10 +318,12 @@ export default function HomeScreen({ onJobSelect, onNavigateToProfile }: HomeScr
             </View>
           </View>
           <TouchableOpacity style={styles.profileButton} onPress={onNavigateToProfile}>
-            {userAvatar ? (
+            {userAvatar && userAvatar.trim() !== '' ? (
               <Image source={{ uri: userAvatar }} style={styles.profileImage} />
             ) : (
-              <Icon name="person" size={24} color="#DC2626" />
+              <View style={styles.profilePlaceholder}>
+                <Text style={styles.profileInitial}>{userName && userName.trim() !== '' ? userName.charAt(0).toUpperCase() : 'U'}</Text>
+              </View>
             )}
           </TouchableOpacity>
         </View>
@@ -343,7 +355,18 @@ export default function HomeScreen({ onJobSelect, onNavigateToProfile }: HomeScr
         </View>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={[loading ? styles.scrollContent : undefined, { paddingBottom: insets.bottom }]}>
+      <ScrollView 
+        style={styles.content} 
+        contentContainerStyle={[loading ? styles.scrollContent : undefined, { paddingBottom: insets.bottom }]}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            colors={['#DC2626']}
+            tintColor="#DC2626"
+          />
+        }
+      >
         <ShowcaseCarousel />
 
         <View style={styles.filterContainer}>
@@ -517,6 +540,8 @@ const styles = StyleSheet.create({
   brandSubscript: { fontSize: 10, color: '#6B7280', marginTop: -4 },
   profileButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   profileImage: { width: 40, height: 40, borderRadius: 20 },
+  profilePlaceholder: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#DC2626', alignItems: 'center', justifyContent: 'center' },
+  profileInitial: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' },
   searchContainer: { flexDirection: 'row', gap: 10, marginTop: 8 },
   searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 1, borderWidth: 1.5, borderColor: '#E5E7EB', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   placeholderContainer: { flexDirection: 'row', position: 'absolute', left: 44, pointerEvents: 'none', overflow: 'hidden', height: 20 },

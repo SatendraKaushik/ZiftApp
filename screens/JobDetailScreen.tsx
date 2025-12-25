@@ -382,8 +382,8 @@ Apply now: ${url}`;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' },
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#FFFFFF' },
   errorText: { fontSize: 16, color: '#6B7280', marginBottom: 16 },
   backButton: { backgroundColor: '#1F2937', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   backButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },

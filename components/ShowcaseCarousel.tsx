@@ -15,6 +15,7 @@ export default function ShowcaseCarousel() {
   const scrollX = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
   const currentIndex = useRef(0);
+  const duplicatedItems = [...showcaseItems, ...showcaseItems];
 
   const handleCardPress = () => {
     Linking.openURL('https://thezift.com');
@@ -22,11 +23,22 @@ export default function ShowcaseCarousel() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      currentIndex.current = (currentIndex.current + 1) % showcaseItems.length;
+      currentIndex.current += 1;
+      
       scrollViewRef.current?.scrollTo({
         x: currentIndex.current * CARD_WIDTH,
         animated: true,
       });
+      
+      if (currentIndex.current >= showcaseItems.length) {
+        setTimeout(() => {
+          scrollViewRef.current?.scrollTo({
+            x: 0,
+            animated: false,
+          });
+          currentIndex.current = 0;
+        }, 500);
+      }
     }, 3000);
 
     return () => clearInterval(interval);
@@ -45,7 +57,7 @@ export default function ShowcaseCarousel() {
         )}
         scrollEventThrottle={16}
       >
-        {showcaseItems.map((item, index) => (
+        {duplicatedItems.map((item, index) => (
           <TouchableOpacity key={index} style={styles.card} onPress={handleCardPress}>
             <Image source={item.image} style={styles.cardImage} resizeMode="cover" />
           </TouchableOpacity>

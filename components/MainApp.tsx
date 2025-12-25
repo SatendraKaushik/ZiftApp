@@ -192,5 +192,6 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
 });

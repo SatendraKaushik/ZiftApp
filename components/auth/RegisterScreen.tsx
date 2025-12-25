@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,11 +14,13 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Axios from '../../libs/Axios';
+import { signInWithGoogle, configureGoogleSignIn } from '../../libs/googleAuth';
+import { TokenStorage } from '../../libs/TokenStorage';
 
 const { height } = Dimensions.get('window');
 
 interface RegisterScreenProps {
-  onRegisterSuccess: (email: string) => void;
+  onRegisterSuccess: (user: any) => void;
   onNavigateToLogin: () => void;
 }
 
@@ -28,6 +30,10 @@ export default function RegisterScreen({ onRegisterSuccess, onNavigateToLogin }:
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
+
+  useEffect(() => {
+    configureGoogleSignIn();
+  }, []);
 
   const getPasswordStrength = (password: string) => {
     let score = 0;
@@ -71,15 +77,43 @@ export default function RegisterScreen({ onRegisterSuccess, onNavigateToLogin }:
     }
   };
 
-  const handleGoogleSignup = () => Alert.alert('Google Signup', 'Google registration coming soon');
-  const handleGithubSignup = () => Alert.alert('GitHub Signup', 'GitHub registration coming soon');
-
+  const handleGoogleSignup = async () => {
+    try {
+      setLoading(true);
+      const userCredential = await signInWithGoogle();
+      const idToken = await userCredential.user.getIdToken();
+      
+      const response = await Axios.post('/user/google-signup', { idToken });
+      
+      if (response.data.shouldRedirectToLogin) {
+        Alert.alert('Account Exists', response.data.message, [
+          { text: 'Go to Login', onPress: onNavigateToLogin }
+        ]);
+        return;
+      }
+      
+      if (response.data.accessToken) {
+        await TokenStorage.setToken(response.data.accessToken);
+      }
+      await TokenStorage.setUser(response.data.user);
+      onRegisterSuccess(response.data.user);
+    } catch (error: any) {
+      Alert.alert('Google Signup Error', error.response?.data?.message || error.message || 'Failed to sign up with Google');
+    } finally {
+      setLoading(false);
+    }
+  };
   const passwordStrength = getPasswordStrength(formData.password);
   const strengthColors = ['#EF4444', '#F97316', '#EAB308', '#22C55E'];
   const strengthLabels = ['Weak', 'Fair', 'Good', 'Strong'];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.header}>
         <Image 
           source={require('../assests/zift/ziftlogo.png')} 
@@ -96,17 +130,16 @@ export default function RegisterScreen({ onRegisterSuccess, onNavigateToLogin }:
           <View>
             <TouchableOpacity style={styles.socialButton} onPress={handleGoogleSignup}>
               <View style={styles.socialButtonContent}>
-                <FontAwesome name="google" size={20} color="#4285F4" />
+                <Image 
+                  source={require('../assests/zift/google.png')} 
+                  style={styles.googleIcon}
+                  resizeMode="contain"
+                />
                 <Text style={styles.socialButtonText}>Continue with Google</Text>
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.socialButton} onPress={handleGithubSignup}>
-              <View style={styles.socialButtonContent}>
-                <FontAwesome name="github" size={20} color="#24292E" />
-                <Text style={styles.socialButtonText}>Continue with GitHub</Text>
-              </View>
-            </TouchableOpacity>
+       
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
@@ -201,10 +234,6 @@ export default function RegisterScreen({ onRegisterSuccess, onNavigateToLogin }:
         )}
 
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.forgotPasswordLink}>
-            <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-          </TouchableOpacity>
-          
           <TouchableOpacity style={styles.loginLink} onPress={onNavigateToLogin}>
             <Text style={styles.loginText}>
               Already have an account? <Text style={styles.loginTextBold}>Sign in</Text>
@@ -218,8 +247,9 @@ export default function RegisterScreen({ onRegisterSuccess, onNavigateToLogin }:
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  scrollContent: { flexGrow: 1, minHeight: height },
+  scrollContent: { paddingBottom: 50 },
   header: { alignItems: 'center', paddingTop: 60, paddingBottom: 40, paddingHorizontal: 20, backgroundColor: '#FAFAFA' },
+   googleIcon: { width: 20, height: 20 },
   logo: { width: 80, height: 80, marginBottom: 16 },
   brandName: { fontSize: 24, fontWeight: 'bold', color: '#DC2626', marginBottom: 8 },
   title: { fontSize: 28, fontWeight: 'bold', color: '#1F2937', marginBottom: 8 },
@@ -250,9 +280,7 @@ const styles = StyleSheet.create({
   registerButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
   backButton: { alignItems: 'center', padding: 12 },
   backButtonText: { fontSize: 14, color: '#6B7280' },
-  footer: { alignItems: 'center', marginTop: 20, gap: 12 },
-  forgotPasswordLink: { padding: 8 },
-  forgotPasswordText: { fontSize: 14, color: '#DC2626', fontWeight: '500' },
+  footer: { alignItems: 'center', marginTop: 20 },
   loginLink: { padding: 8 },
   loginText: { fontSize: 14, color: '#6B7280' },
   loginTextBold: { color: '#DC2626', fontWeight: '600' },

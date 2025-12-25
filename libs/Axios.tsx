@@ -9,6 +9,7 @@ const Axios = axios.create({
 // Add token to requests
 Axios.interceptors.request.use(async (config) => {
   const token = await TokenStorage.getToken();
+  console.log('Tokenintereptor:', token);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

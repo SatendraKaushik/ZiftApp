@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Axios from '../../libs/Axios';
@@ -50,6 +50,7 @@ interface ZiftDifficultyStats {
 export default function AnalyticsScreen({ onBack }: { onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [ziftStats, setZiftStats] = useState<ZiftStats | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [difficultyStats, setDifficultyStats] = useState<ZiftDifficultyStats[]>([]);
@@ -60,11 +61,15 @@ export default function AnalyticsScreen({ onBack }: { onBack: () => void }) {
 
   const fetchAllAnalytics = async () => {
     try {
+      setLoading(true);
       const [dashboardRes, statsRes, difficultyRes] = await Promise.all([
         Axios.get('/user/dashboard-stats'),
         Axios.get('/user/stats'),
         Axios.get('/user/difficulty-stats')
       ]);
+      console.log('Dashboard Stats:', dashboardRes?.data);
+      console.log('User Stats:', statsRes?.data);
+      console.log('Difficulty Stats:', difficultyRes?.data);
 
       if (dashboardRes?.data?.success && dashboardRes?.data?.data?.userStats) {
         setZiftStats(dashboardRes.data.data.userStats);
@@ -81,7 +86,13 @@ export default function AnalyticsScreen({ onBack }: { onBack: () => void }) {
       console.error('Error fetching analytics:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchAllAnalytics();
   };
 
   if (loading) {
@@ -93,7 +104,18 @@ export default function AnalyticsScreen({ onBack }: { onBack: () => void }) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: insets.bottom }}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={{ paddingBottom: insets.bottom }}
+      refreshControl={
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh}
+          colors={['#DC2626']}
+          tintColor="#DC2626"
+        />
+      }
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack}>
           <Icon name="arrow-back" size={24} color="#1F2937" />
@@ -108,10 +130,12 @@ export default function AnalyticsScreen({ onBack }: { onBack: () => void }) {
         <View style={styles.circularProgressContainer}>
           <View style={styles.circularCard}>
             <View style={styles.circularProgress}>
-              <View style={[styles.circularProgressBar, { 
-                transform: [{ rotate: `${((ziftStats?.solvedProblems || 0) / (ziftStats?.totalProblems || 1)) * 360}deg` }],
-                borderColor: '#EF4444'
-              }]} />
+              {(ziftStats?.solvedProblems || 0) > 0 && (
+                <View style={[styles.circularProgressBar, { 
+                  transform: [{ rotate: `${((ziftStats?.solvedProblems || 0) / (ziftStats?.totalProblems || 1)) * 360}deg` }],
+                  borderColor: '#EF4444'
+                }]} />
+              )}
               <View style={styles.circularInner}>
                 <Text style={styles.circularValue}>{ziftStats?.solvedProblems || 0}</Text>
                 <Text style={styles.circularTotal}>/ {ziftStats?.totalProblems || 0}</Text>
@@ -300,7 +324,7 @@ export default function AnalyticsScreen({ onBack }: { onBack: () => void }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 20, paddingTop: 50, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
   headerTitle: { fontSize: 24, fontWeight: '700', color: '#1F2937' },
   section: { padding: 16, backgroundColor: '#FFFFFF', marginTop: 8 },

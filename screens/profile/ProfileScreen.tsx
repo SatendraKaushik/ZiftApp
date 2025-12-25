@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Switch, Alert, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Switch, Alert, Modal, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LottieView from 'lottie-react-native';
@@ -18,6 +18,7 @@ export default function ProfileScreen({ onNavigateToApplied, onNavigateToSetting
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [updatingPublic, setUpdatingPublic] = useState(false);
   const [uploadingResume, setUploadingResume] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
@@ -31,6 +32,7 @@ export default function ProfileScreen({ onNavigateToApplied, onNavigateToSetting
     try {
       setLoading(true);
       const response = await Axios.get('/user/get-user-profile-data');
+      console.log('User profile data:', response.data);
       if (response.data.authenticated) {
         setUser(response.data.user);
       }
@@ -38,17 +40,30 @@ export default function ProfileScreen({ onNavigateToApplied, onNavigateToSetting
       console.error('Error fetching user profile:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchUserProfile();
+  };
+
   const handleTogglePublicProfile = async (value: boolean) => {
-    if (value && (!user.phoneNumber || !user.isResumeUploaded)) {
-      Alert.alert(
-        'Profile Incomplete',
-        'Please add phone number and upload resume before making your profile public.',
-        [{ text: 'OK' }]
-      );
-      return;
+    if (value) {
+      const missing = [];
+      if (!user.phoneNumber) missing.push('phone number');
+      if (!user.isResumeUploaded) missing.push('resume');
+      if (!user.avatar) missing.push('profile photo');
+      
+      if (missing.length > 0) {
+        Alert.alert(
+          'Profile Incomplete',
+          `Please add ${missing.join(', ')} before making your profile public.`,
+          [{ text: 'OK' }]
+        );
+        return;
+      }
     }
     try {
       setUpdatingPublic(true);
@@ -156,7 +171,19 @@ export default function ProfileScreen({ onNavigateToApplied, onNavigateToSetting
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom }}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={{ paddingBottom: insets.bottom }}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            colors={['#DC2626']}
+            tintColor="#DC2626"
+          />
+        }
+      >
         <View style={styles.profileSection}>
           <View style={styles.profileRow}>
             <View style={styles.avatarContainer}>
@@ -408,8 +435,8 @@ export default function ProfileScreen({ onNavigateToApplied, onNavigateToSetting
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' },
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, backgroundColor: '#FFFFFF' },
   lottieAnimation: { width: 200, height: 200, marginBottom: -20 },
   errorText: { fontSize: 16, color: '#6B7280', marginTop: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },

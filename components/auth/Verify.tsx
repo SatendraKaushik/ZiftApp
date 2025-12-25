@@ -19,9 +19,10 @@ interface VerifyProps {
   email: string;
   onVerifySuccess: (user: any) => void;
   onNavigateToRegister: () => void;
+  onNavigateToLogin: () => void;
 }
 
-export default function Verify({ email, onVerifySuccess, onNavigateToRegister }: VerifyProps) {
+export default function Verify({ email, onVerifySuccess, onNavigateToRegister, onNavigateToLogin }: VerifyProps) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -29,7 +30,19 @@ export default function Verify({ email, onVerifySuccess, onNavigateToRegister }:
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   const handleChange = (index: number, value: string) => {
-    if (value.length > 1) return;
+    if (value.length > 1) {
+      const pastedCode = value.slice(0, 6);
+      const newOtp = [...otp];
+      for (let i = 0; i < pastedCode.length; i++) {
+        if (index + i < 6) {
+          newOtp[index + i] = pastedCode[i];
+        }
+      }
+      setOtp(newOtp);
+      const nextIndex = Math.min(index + pastedCode.length, 5);
+      inputRefs.current[nextIndex]?.focus();
+      return;
+    }
     
     const newOtp = [...otp];
     newOtp[index] = value;
@@ -41,8 +54,16 @@ export default function Verify({ email, onVerifySuccess, onNavigateToRegister }:
   };
 
   const handleKeyPress = (index: number, key: string) => {
-    if (key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+    if (key === 'Backspace') {
+      const newOtp = [...otp];
+      if (otp[index]) {
+        newOtp[index] = '';
+        setOtp(newOtp);
+      } else if (index > 0) {
+        newOtp[index - 1] = '';
+        setOtp(newOtp);
+        inputRefs.current[index - 1]?.focus();
+      }
     }
   };
 
@@ -60,8 +81,9 @@ export default function Verify({ email, onVerifySuccess, onNavigateToRegister }:
         email,
         otp: otpString
       });
-      Alert.alert('Success', response.data.message);
-      onVerifySuccess(response.data.user);
+      Alert.alert('Success', response.data.message, [
+        { text: 'OK', onPress: () => onNavigateToLogin() }
+      ]);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Verification failed';
       Alert.alert('Error', errorMessage);
@@ -100,7 +122,12 @@ export default function Verify({ email, onVerifySuccess, onNavigateToRegister }:
   }, [timer]);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.header}>
         <Image 
           source={require('../assests/zift/ziftlogo.png')} 
@@ -122,7 +149,7 @@ export default function Verify({ email, onVerifySuccess, onNavigateToRegister }:
                 key={index}
                 ref={(el) => { inputRefs.current[index] = el; }}
                 style={styles.otpInput}
-                maxLength={1}
+                maxLength={6}
                 value={digit}
                 onChangeText={(value) => handleChange(index, value)}
                 onKeyPress={({ nativeEvent }) => handleKeyPress(index, nativeEvent.key)}
@@ -168,18 +195,18 @@ export default function Verify({ email, onVerifySuccess, onNavigateToRegister }:
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
-  scrollContent: { flexGrow: 1, minHeight: height },
-  header: { alignItems: 'center', paddingTop: 60, paddingBottom: 40, paddingHorizontal: 20 },
-  logo: { width: 80, height: 80, marginBottom: 16 },
-  brandName: { fontSize: 24, fontWeight: 'bold', color: '#DC2626', marginBottom: 8 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#1F2937', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#6B7280', textAlign: 'center' },
-  email: { fontSize: 16, fontWeight: '600', color: '#1F2937', marginTop: 4 },
-  content: { flex: 1, paddingHorizontal: 20 },
-  form: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 32, marginBottom: 32, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
-  label: { fontSize: 16, fontWeight: '500', color: '#374151', marginBottom: 16, textAlign: 'center' },
-  otpContainer: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 24 },
-  otpInput: { width: 48, height: 48, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, fontSize: 18, fontWeight: '600', color: '#1F2937', textAlign: 'center' },
+  scrollContent: { paddingBottom: 50 },
+  header: { alignItems: 'center', paddingTop: 40, paddingBottom: 30, paddingHorizontal: 20 },
+  logo: { width: 60, height: 60, marginBottom: 12 },
+  brandName: { fontSize: 20, fontWeight: 'bold', color: '#DC2626', marginBottom: 6 },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#1F2937', marginBottom: 6 },
+  subtitle: { fontSize: 14, color: '#6B7280', textAlign: 'center' },
+  email: { fontSize: 14, fontWeight: '600', color: '#1F2937', marginTop: 4 },
+  content: { paddingHorizontal: 20, paddingBottom: 20 },
+  form: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
+  label: { fontSize: 14, fontWeight: '500', color: '#374151', marginBottom: 16, textAlign: 'center' },
+  otpContainer: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 24 },
+  otpInput: { width: 42, height: 42, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, fontSize: 18, fontWeight: '600', color: '#1F2937', textAlign: 'center' },
   verifyButton: { backgroundColor: '#DC2626', borderRadius: 8, padding: 16, alignItems: 'center', marginBottom: 24 },
   buttonDisabled: { opacity: 0.5 },
   verifyButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Linking, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Linking, Alert, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Axios from '../libs/Axios';
@@ -61,6 +61,7 @@ interface ApplicationDetailScreenProps {
 export default function ApplicationDetailScreen({ applicationId, onBack, onViewJob }: ApplicationDetailScreenProps) {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [application, setApplication] = useState<Application | null>(null);
   const [stages, setStages] = useState<Stage[]>([]);
   const [job, setJob] = useState<Job | null>(null);
@@ -97,7 +98,13 @@ export default function ApplicationDetailScreen({ applicationId, onBack, onViewJ
       Alert.alert('Error', 'Failed to load application details');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchApplicationDetails();
   };
 
   const formatDate = (dateString: string) => {
@@ -158,7 +165,19 @@ export default function ApplicationDetailScreen({ applicationId, onBack, onViewJ
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom }}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={{ paddingBottom: insets.bottom }}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            colors={['#DC2626']}
+            tintColor="#DC2626"
+          />
+        }
+      >
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Icon name="business" size={20} color="#DC2626" />
@@ -315,8 +334,8 @@ export default function ApplicationDetailScreen({ applicationId, onBack, onViewJ
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' },
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#FFFFFF' },
   errorText: { fontSize: 16, color: '#6B7280', marginBottom: 16 },
   backButton: { backgroundColor: '#DC2626', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 },
   backButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },

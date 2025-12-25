@@ -23,6 +23,11 @@ export default function AuthNavigator({ onAuthSuccess }: AuthNavigatorProps) {
     setCurrentScreen('verify');
   };
 
+  const handleNavigateToVerify = (email: string) => {
+    setVerifyEmail(email);
+    setCurrentScreen('verify');
+  };
+
   const handleVerifySuccess = (user: any) => {
     onAuthSuccess(user);
   };
@@ -34,6 +39,7 @@ export default function AuthNavigator({ onAuthSuccess }: AuthNavigatorProps) {
           onLoginSuccess={handleLoginSuccess}
           onNavigateToRegister={() => setCurrentScreen('register')}
           onNavigateToForgot={() => setCurrentScreen('forgot')}
+          onNavigateToVerify={handleNavigateToVerify}
         />
       );
     case 'register':
@@ -55,6 +61,7 @@ export default function AuthNavigator({ onAuthSuccess }: AuthNavigatorProps) {
           email={verifyEmail}
           onVerifySuccess={handleVerifySuccess}
           onNavigateToRegister={() => setCurrentScreen('register')}
+          onNavigateToLogin={() => setCurrentScreen('login')}
         />
       );
     default:
@@ -63,6 +70,7 @@ export default function AuthNavigator({ onAuthSuccess }: AuthNavigatorProps) {
           onLoginSuccess={handleLoginSuccess}
           onNavigateToRegister={() => setCurrentScreen('register')}
           onNavigateToForgot={() => setCurrentScreen('forgot')}
+          onNavigateToVerify={handleNavigateToVerify}
         />
       );
   }

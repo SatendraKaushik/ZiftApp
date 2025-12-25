@@ -89,7 +89,14 @@ export default function SavedJobsScreen({ onJobSelect }: SavedJobsScreenProps) {
       <ScrollView
         style={styles.content}
         contentContainerStyle={[jobs.length === 0 ? styles.emptyScrollContent : { paddingBottom: insets.bottom }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            colors={['#DC2626']}
+            tintColor="#DC2626"
+          />
+        }
       >
         {jobs.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -165,7 +172,7 @@ export default function SavedJobsScreen({ onJobSelect }: SavedJobsScreenProps) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#1F2937' },
   headerSubtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500' },

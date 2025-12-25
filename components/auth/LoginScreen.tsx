@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,14 @@ import {
   ScrollView,
   Image,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Axios from '../../libs/Axios';
 import { TokenStorage } from '../../libs/TokenStorage';
+import { signInWithGoogle, configureGoogleSignIn } from '../../libs/googleAuth';
 
 const { height } = Dimensions.get('window');
 
@@ -22,14 +25,19 @@ interface LoginScreenProps {
   onLoginSuccess: (user: any) => void;
   onNavigateToRegister: () => void;
   onNavigateToForgot: () => void;
+  onNavigateToVerify: (email: string) => void;
 }
 
-export default function LoginScreen({ onLoginSuccess, onNavigateToRegister, onNavigateToForgot }: LoginScreenProps) {
+export default function LoginScreen({ onLoginSuccess, onNavigateToRegister, onNavigateToForgot, onNavigateToVerify }: LoginScreenProps) {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
+
+  useEffect(() => {
+    configureGoogleSignIn();
+  }, []);
 
   const validateForm = () => {
     const newErrors = { email: '', password: '' };
@@ -52,9 +60,10 @@ export default function LoginScreen({ onLoginSuccess, onNavigateToRegister, onNa
     setLoading(true);
     try {
       const response = await Axios.post('/user/login', formData);
+      
       if (response.data.user) {
         if (response.data.accessToken) {
-          console.log('Access token:', response.data.accessToken);
+         
           await TokenStorage.setToken(response.data.accessToken);
         }
         console.log('User data:', response.data.user);
@@ -71,20 +80,70 @@ export default function LoginScreen({ onLoginSuccess, onNavigateToRegister, onNa
       } else {
         errorMessage = error.response?.data?.message || 'Login failed';
       }
-      Alert.alert('Login Error', errorMessage);
+      
+      if (errorMessage === 'Email not verified') {
+        Alert.alert(
+          'Email Not Verified',
+          'Your email is not verified. Please verify your email to continue.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Verify Now',
+              onPress: async () => {
+                try {
+                  await Axios.post('/user/resend-otp', { email: formData.email });
+                  onNavigateToVerify(formData.email);
+                } catch (err: any) {
+                  Alert.alert('Error', err.response?.data?.message || 'Failed to send OTP');
+                }
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Login Error', errorMessage);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleLogin = () => Alert.alert('Google Login', 'Google authentication coming soon');
-  const handleGithubLogin = () => Alert.alert('GitHub Login', 'GitHub authentication coming soon');
- // "package_name": "com.ziftapp"
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true);
+      const userCredential = await signInWithGoogle();
+      const idToken = await userCredential.user.getIdToken();
+
+      const response = await Axios.post('/user/google-auth', { idToken });
+      
+      if (response.data.accessToken) {
+        // console.log('Tokenby google:', response.data.accessToken);
+        await TokenStorage.setToken(response.data.accessToken);
+      }
+      await TokenStorage.setUser(response.data.user);
+      onLoginSuccess(response.data.user);
+    } catch (error: any) {
+      Alert.alert('Google Login Error', error.response?.data?.message || error.message || 'Failed to sign in with Google');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // "package_name": "com.ziftapp"
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.header}>
-        <Image 
-          source={require('../assests/zift/ziftlogo.png')} 
+        <Image
+          source={require('../assests/zift/ziftlogo.png')}
           style={styles.logo}
           resizeMode="contain"
         />
@@ -98,17 +157,16 @@ export default function LoginScreen({ onLoginSuccess, onNavigateToRegister, onNa
           <View>
             <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
               <View style={styles.socialButtonContent}>
-                <FontAwesome name="google" size={20} color="#4285F4" />
+                <Image 
+                  source={require('../assests/zift/google.png')} 
+                  style={styles.googleIcon}
+                  resizeMode="contain"
+                />
                 <Text style={styles.socialButtonText}>Continue with Google</Text>
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.socialButton} onPress={handleGithubLogin}>
-              <View style={styles.socialButtonContent}>
-                <FontAwesome name="github" size={20} color="#24292E" />
-                <Text style={styles.socialButtonText}>Continue with GitHub</Text>
-              </View>
-            </TouchableOpacity>
+
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
@@ -182,12 +240,13 @@ export default function LoginScreen({ onLoginSuccess, onNavigateToRegister, onNa
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
-  scrollContent: { flexGrow: 1, minHeight: height },
+  scrollContent: { paddingBottom: 100 },
   header: { alignItems: 'center', paddingTop: 60, paddingBottom: 40, paddingHorizontal: 20, backgroundColor: '#FAFAFA' },
   logo: { width: 80, height: 80, marginBottom: 16 },
   brandName: { fontSize: 24, fontWeight: 'bold', color: '#DC2626', marginBottom: 8 },
@@ -196,6 +255,7 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingHorizontal: 20, paddingVertical: 30 },
   socialButton: { backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#E5E7EB', borderRadius: 12, padding: 16, marginBottom: 16, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
   socialButtonContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
+  googleIcon: { width: 20, height: 20 },
   socialButtonText: { fontSize: 16, fontWeight: '600', color: '#374151' },
   divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 24 },
   dividerLine: { flex: 1, height: 1, backgroundColor: '#E5E7EB' },

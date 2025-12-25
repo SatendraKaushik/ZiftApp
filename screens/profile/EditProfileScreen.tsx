@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Switch, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Switch, Alert, Image, RefreshControl, BackHandler } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { launchImageLibrary } from 'react-native-image-picker';
 import Axios from '../../libs/Axios';
 
 interface EditProfileScreenProps {
@@ -15,16 +16,58 @@ export default function EditProfileScreen({ user, onBack, onUpdate }: EditProfil
   const [name, setName] = useState(user.name || '');
   const [phoneNumber, setPhoneNumber] = useState(user.phoneNumber || '');
   const [makeprofilepublic, setMakeProfilePublic] = useState(user.makeprofilepublic || false);
+  const [avatar, setAvatar] = useState(user.avatar && user.avatar.trim() !== '' ? user.avatar : '');
+  const [avatarFile, setAvatarFile] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      onBack();
+      return true;
+    });
+    return () => backHandler.remove();
+  }, [onBack]);
+
+  const handlePickImage = () => {
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+        quality: 0.8,
+        maxWidth: 500,
+        maxHeight: 500,
+      },
+      (response) => {
+        if (response.didCancel) return;
+        if (response.errorCode) {
+          Alert.alert('Error', 'Failed to pick image');
+          return;
+        }
+        if (response.assets && response.assets[0]) {
+          const asset = response.assets[0];
+          setAvatar(asset.uri || '');
+          setAvatarFile(asset);
+        }
+      }
+    );
+  };
 
   const handleTogglePublicProfile = (value: boolean) => {
-    if (value && (!phoneNumber || !user.isResumeUploaded)) {
-      Alert.alert(
-        'Profile Incomplete',
-        'Please add phone number and upload resume before making your profile public.',
-        [{ text: 'OK' }]
-      );
-      return;
+    if (value) {
+      const hasAvatar = avatar && avatar.trim() !== '';
+      const missing = [];
+      if (!phoneNumber) missing.push('phone number');
+      if (!user.isResumeUploaded) missing.push('resume');
+      if (!hasAvatar) missing.push('profile photo');
+      
+      if (missing.length > 0) {
+        Alert.alert(
+          'Profile Incomplete',
+          `Please add ${missing.join(', ')} before making your profile public.`,
+          [{ text: 'OK' }]
+        );
+        return;
+      }
     }
     setMakeProfilePublic(value);
   };
@@ -32,11 +75,24 @@ export default function EditProfileScreen({ user, onBack, onUpdate }: EditProfil
   const handleSave = async () => {
     try {
       setSaving(true);
-      await Axios.put('/user/profile', {
-        name,
-        phoneNumber,
-        makeprofilepublic,
+      
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('phoneNumber', phoneNumber);
+      formData.append('makeprofilepublic', makeprofilepublic.toString());
+      
+      if (avatarFile) {
+        formData.append('avatar', {
+          uri: avatarFile.uri,
+          type: avatarFile.type || 'image/jpeg',
+          name: avatarFile.fileName || 'avatar.jpg',
+        } as any);
+      }
+      
+      await Axios.put('/user/profile', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
+      
       Alert.alert('Success', 'Profile updated successfully');
       onUpdate();
       onBack();
@@ -46,6 +102,16 @@ export default function EditProfileScreen({ user, onBack, onUpdate }: EditProfil
     } finally {
       setSaving(false);
     }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    setName(user.name || '');
+    setPhoneNumber(user.phoneNumber || '');
+    setMakeProfilePublic(user.makeprofilepublic || false);
+    setAvatar(user.avatar && user.avatar.trim() !== '' ? user.avatar : '');
+    setAvatarFile(null);
+    setRefreshing(false);
   };
 
   return (
@@ -58,7 +124,35 @@ export default function EditProfileScreen({ user, onBack, onUpdate }: EditProfil
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom }}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={{ paddingBottom: insets.bottom }}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            colors={['#DC2626']}
+            tintColor="#DC2626"
+          />
+        }
+      >
+        <View style={styles.avatarSection}>
+          <TouchableOpacity style={styles.avatarContainer} onPress={handlePickImage}>
+            {(avatar && avatar.trim() !== '') ? (
+              <Image source={{ uri: avatar }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarText}>{(name && name.trim() !== '') ? name.charAt(0).toUpperCase() : 'U'}</Text>
+              </View>
+            )}
+            <View style={styles.avatarEditBadge}>
+              <Icon name="camera-alt" size={16} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.avatarLabel}>Tap to change photo</Text>
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.label}>Full Name</Text>
           <View style={styles.inputContainer}>
@@ -143,6 +237,13 @@ const styles = StyleSheet.create({
   backBtn: { padding: 8 },
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937' },
   content: { flex: 1 },
+  avatarSection: { backgroundColor: '#FFFFFF', padding: 20, marginTop: 8, alignItems: 'center' },
+  avatarContainer: { position: 'relative', marginBottom: 12 },
+  avatarImage: { width: 100, height: 100, borderRadius: 50 },
+  avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#DC2626', justifyContent: 'center', alignItems: 'center' },
+  avatarText: { fontSize: 36, fontWeight: 'bold', color: '#FFFFFF' },
+  avatarEditBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#1F2937', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#FFFFFF' },
+  avatarLabel: { fontSize: 14, color: '#6B7280' },
   section: { backgroundColor: '#FFFFFF', padding: 20, marginTop: 8 },
   label: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 },
   inputContainer: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#F9FAFB', borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
