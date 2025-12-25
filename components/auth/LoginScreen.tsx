@@ -33,6 +33,7 @@ export default function LoginScreen({ onLoginSuccess, onNavigateToRegister, onNa
   const [errors, setErrors] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
 
   useEffect(() => {
@@ -62,11 +63,7 @@ export default function LoginScreen({ onLoginSuccess, onNavigateToRegister, onNa
       const response = await Axios.post('/user/login', formData);
       
       if (response.data.user) {
-        if (response.data.accessToken) {
-         
-          await TokenStorage.setToken(response.data.accessToken);
-        }
-        console.log('User data:', response.data.user);
+        
         await TokenStorage.setUser(response.data.user);
         onLoginSuccess(response.data.user);
       }
@@ -110,22 +107,21 @@ export default function LoginScreen({ onLoginSuccess, onNavigateToRegister, onNa
 
   const handleGoogleLogin = async () => {
     try {
-      setLoading(true);
+      setGoogleLoading(true);
       const userCredential = await signInWithGoogle();
       const idToken = await userCredential.user.getIdToken();
 
       const response = await Axios.post('/user/google-auth', { idToken });
+    
       
-      if (response.data.accessToken) {
-        // console.log('Tokenby google:', response.data.accessToken);
-        await TokenStorage.setToken(response.data.accessToken);
-      }
       await TokenStorage.setUser(response.data.user);
       onLoginSuccess(response.data.user);
     } catch (error: any) {
-      Alert.alert('Google Login Error', error.response?.data?.message || error.message || 'Failed to sign in with Google');
+      if (error.message !== 'Sign in action cancelled') {
+        Alert.alert('Google Login Error', error.response?.data?.message || error.message || 'Failed to sign in with Google');
+      }
     } finally {
-      setLoading(false);
+      setGoogleLoading(false);
     }
   };
 
@@ -155,14 +151,24 @@ export default function LoginScreen({ onLoginSuccess, onNavigateToRegister, onNa
       <View style={styles.content}>
         {!showEmailForm ? (
           <View>
-            <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
+            <TouchableOpacity 
+              style={[styles.socialButton, googleLoading && styles.buttonDisabled]} 
+              onPress={handleGoogleLogin}
+              disabled={googleLoading}
+            >
               <View style={styles.socialButtonContent}>
-                <Image 
-                  source={require('../assests/zift/google.png')} 
-                  style={styles.googleIcon}
-                  resizeMode="contain"
-                />
-                <Text style={styles.socialButtonText}>Continue with Google</Text>
+                {googleLoading ? (
+                  <ActivityIndicator color="#4285F4" size="small" />
+                ) : (
+                  <>
+                    <Image 
+                      source={require('../assests/zift/google.png')} 
+                      style={styles.googleIcon}
+                      resizeMode="contain"
+                    />
+                    <Text style={styles.socialButtonText}>Continue with Google</Text>
+                  </>
+                )}
               </View>
             </TouchableOpacity>
 

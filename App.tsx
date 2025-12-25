@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
+import { StatusBar, StyleSheet, useColorScheme, View, Appearance } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AuthNavigator from './components/auth/AuthNavigator';
 import MainApp from './components/MainApp';
@@ -12,13 +12,21 @@ function App() {
   const isDarkMode = useColorScheme() === 'dark';
 
   useEffect(() => {
+    Appearance.setColorScheme('light');
+  }, []);
+
+  useEffect(() => {
     checkAuthStatus();
   }, []);
 
   const checkAuthStatus = async () => {
     try {
       const token = await TokenStorage.getToken();
-      if (token) {
+      const userData = await TokenStorage.getUser();
+      console.log('Token:', token);
+      console.log('User Data:', userData);
+      if (token && userData) {
+        setUser(userData);
         setIsAuthenticated(true);
       }
     } catch (error) {
@@ -35,6 +43,7 @@ function App() {
 
   const handleLogout = async () => {
     await TokenStorage.removeToken();
+    await TokenStorage.removeUser();
     setUser(null);
     setIsAuthenticated(false);
   };

@@ -20,11 +20,12 @@ import { TokenStorage } from '../../libs/TokenStorage';
 const { height } = Dimensions.get('window');
 
 interface RegisterScreenProps {
-  onRegisterSuccess: (user: any) => void;
+  onRegisterSuccess: (emailOrUser: string | any) => void;
   onNavigateToLogin: () => void;
+  onGoogleSignupSuccess: (user: any) => void;
 }
 
-export default function RegisterScreen({ onRegisterSuccess, onNavigateToLogin }: RegisterScreenProps) {
+export default function RegisterScreen({ onRegisterSuccess, onNavigateToLogin, onGoogleSignupSuccess }: RegisterScreenProps) {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [errors, setErrors] = useState({ name: '', email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -92,11 +93,8 @@ export default function RegisterScreen({ onRegisterSuccess, onNavigateToLogin }:
         return;
       }
       
-      if (response.data.accessToken) {
-        await TokenStorage.setToken(response.data.accessToken);
-      }
       await TokenStorage.setUser(response.data.user);
-      onRegisterSuccess(response.data.user);
+      onGoogleSignupSuccess(response.data.user);
     } catch (error: any) {
       Alert.alert('Google Signup Error', error.response?.data?.message || error.message || 'Failed to sign up with Google');
     } finally {

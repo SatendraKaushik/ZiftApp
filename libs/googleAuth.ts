@@ -11,6 +11,7 @@ export const configureGoogleSignIn = () => {
 };
 
 export const signInWithGoogle = async () => {
+  await GoogleSignin.signOut();
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
   const signInResult = await GoogleSignin.signIn();
   const idToken = signInResult.data?.idToken;

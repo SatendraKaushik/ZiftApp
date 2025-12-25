@@ -18,6 +18,10 @@ export default function AuthNavigator({ onAuthSuccess }: AuthNavigatorProps) {
     onAuthSuccess(user);
   };
 
+  const handleGoogleSignupSuccess = (user: any) => {
+    onAuthSuccess(user);
+  };
+
   const handleRegisterSuccess = (email: string) => {
     setVerifyEmail(email);
     setCurrentScreen('verify');
@@ -47,6 +51,7 @@ export default function AuthNavigator({ onAuthSuccess }: AuthNavigatorProps) {
         <RegisterScreen
           onRegisterSuccess={handleRegisterSuccess}
           onNavigateToLogin={() => setCurrentScreen('login')}
+          onGoogleSignupSuccess={handleGoogleSignupSuccess}
         />
       );
     case 'forgot':

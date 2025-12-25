@@ -177,7 +177,7 @@ export default function HomeScreen({ onJobSelect, onNavigateToProfile }: HomeScr
       const bookmarkChecks = await Promise.all(
         jobIds.map((id: string) => Axios.get(`/user/bookmarks/status/${id}`).catch(() => ({ data: { isBookmarked: false } })))
       );
-      const bookmarked = new Set(jobIds.filter((_: string, idx: number) => bookmarkChecks[idx]?.data?.isBookmarked));
+      const bookmarked = new Set<string>(jobIds.filter((_: string, idx: number) => bookmarkChecks[idx]?.data?.isBookmarked));
       setBookmarkedJobs(bookmarked);
     } catch (error) {
       console.error('Error fetching jobs:', error);

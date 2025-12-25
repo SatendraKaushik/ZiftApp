@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl, Image, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LottieView from 'lottie-react-native';
@@ -33,6 +33,8 @@ export default function SavedJobsScreen({ onJobSelect }: SavedJobsScreenProps) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastOpacity] = useState(new Animated.Value(0));
 
   useEffect(() => {
     fetchSavedJobs();
@@ -55,20 +57,43 @@ export default function SavedJobsScreen({ onJobSelect }: SavedJobsScreenProps) {
     fetchSavedJobs();
   };
 
+  const handleUnsaveJob = async (jobId: string) => {
+    try {
+      setJobs(prevJobs => prevJobs.filter(job => job._id !== jobId));
+      await Axios.post(`/user/bookmarks/toggle/${jobId}`);
+      showToast();
+    } catch (error) {
+      console.error('Error unsaving job:', error);
+      fetchSavedJobs();
+    }
+  };
+
+  const showToast = () => {
+    setToastVisible(true);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.delay(2000),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 300, useNativeDriver: true })
+    ]).start(() => setToastVisible(false));
+  };
+
   const formatSalary = (salary: string) => {
+    const formatNum = (num: number) => {
+      if (num >= 10000000) return `${(num / 10000000).toFixed(1)}Cr`;
+      if (num >= 100000) return `${(num / 100000).toFixed(1)}L`;
+      if (num >= 1000) return `${(num / 1000).toFixed(0)}k`;
+      return num.toString();
+    };
+
     const parts = salary.split('-');
     if (parts.length === 2) {
       const min = Number.parseInt(parts[0]);
       const max = Number.parseInt(parts[1]);
-      const formatNum = (num: number) => {
-        if (num >= 10000000) return `${(num / 10000000).toFixed(1)}Cr`;
-        if (num >= 100000) return `${(num / 100000).toFixed(1)}L`;
-        if (num >= 1000) return `${(num / 1000).toFixed(0)}k`;
-        return num.toString();
-      };
       return `₹${formatNum(min)} - ${formatNum(max)}`;
     }
-    return `₹${salary}`;
+    
+    const num = Number.parseInt(salary);
+    return `₹${formatNum(num)}`;
   };
 
   if (loading) {
@@ -139,7 +164,9 @@ export default function SavedJobsScreen({ onJobSelect }: SavedJobsScreenProps) {
                       </View>
                     </View>
                   </View>
-                  <Icon name="bookmark" size={20} color="#DC2626" />
+                  <TouchableOpacity onPress={() => handleUnsaveJob(job._id)}>
+                    <Icon name="bookmark" size={20} color="#DC2626" />
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.tagsContainer}>
@@ -166,6 +193,13 @@ export default function SavedJobsScreen({ onJobSelect }: SavedJobsScreenProps) {
           </View>
         )}
       </ScrollView>
+
+      {toastVisible && (
+        <Animated.View style={[styles.toast, { opacity: toastOpacity }]}>
+          <Icon name="check-circle" size={18} color="#FFFFFF" />
+          <Text style={styles.toastText}>Job removed from saved</Text>
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -201,4 +235,6 @@ const styles = StyleSheet.create({
   salary: { fontSize: 16, fontWeight: 'bold', color: '#DC2626' },
   jobTypeChip: { backgroundColor: '#DBEAFE', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
   jobTypeText: { fontSize: 10, color: '#1E40AF', fontWeight: '600' },
+  toast: { position: 'absolute', top: 100, alignSelf: 'center', backgroundColor: '#DC2626', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 6, maxWidth: '70%' },
+  toastText: { fontSize: 14, color: '#FFFFFF', fontWeight: '600' },
 });
