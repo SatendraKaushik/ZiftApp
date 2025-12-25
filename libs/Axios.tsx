@@ -2,7 +2,7 @@ import axios from "axios";
 import { TokenStorage } from './TokenStorage';
 
 const Axios = axios.create({
-  baseURL: "http://192.168.0.106:8080/api/v1",
+  baseURL: "http://192.168.3.254:8080/api/v1",
   withCredentials: true,
 });
 

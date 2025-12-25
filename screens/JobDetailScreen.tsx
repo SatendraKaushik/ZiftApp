@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Linking, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Image, Linking, Alert, Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Axios from '../libs/Axios';
@@ -94,6 +94,24 @@ export default function JobDetailScreen({ jobId, onBack }: JobDetailScreenProps)
     }
   };
 
+  const handleShare = async () => {
+    try {
+      const url = `https://thezift.com/jobs/${jobId}`;
+      const message = `Check out this job opportunity!
+
+${job?.role || job?.title}
+${job?.postedBy.company?.name || 'Company'}
+📍 ${job?.location}
+💰 ₹${job?.salaryRange}
+
+Apply now: ${url}`;
+      
+      await Share.share({ message, url });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -120,7 +138,7 @@ export default function JobDetailScreen({ jobId, onBack }: JobDetailScreenProps)
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Job Details</Text>
-        <TouchableOpacity style={styles.shareBtn}>
+        <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
           <Icon name="share" size={22} color="#6B7280" />
         </TouchableOpacity>
       </View>

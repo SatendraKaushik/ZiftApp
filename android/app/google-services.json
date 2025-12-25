@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "166734067721",
+    "project_id": "zift-83ef7",
+    "storage_bucket": "zift-83ef7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:166734067721:android:d8999eb1e5770b930c60d8",
+        "android_client_info": {
+          "package_name": "com.ziftapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "166734067721-a5adlkaasficuo4l3lp8uh749t4pu3ql.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ziftapp",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "166734067721-cuiuks9p2rgtvlrfpldgcfllhvvmgq1k.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA28ht9lf5bCABySJqhluVUkxx8ARsVUKU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "166734067721-cuiuks9p2rgtvlrfpldgcfllhvvmgq1k.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "166734067721-r3e3dijir1anf9tda0up5p9shvqokrtc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.thezift"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

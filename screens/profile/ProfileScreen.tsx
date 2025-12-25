@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LottieView from 'lottie-react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { pick } from '@react-native-documents/picker';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import Axios from '../../libs/Axios';
 
@@ -63,65 +63,48 @@ export default function ProfileScreen({ onNavigateToApplied, onNavigateToSetting
     }
   };
 
-  const handleResumeUpload = () => {
-    const options = {
-      mediaType: 'mixed',
-      includeBase64: false,
-      selectionLimit: 1,
-    };
+  const handleResumeUpload = async () => {
+    try {
+      const [file] = await pick({
+        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        allowMultiSelection: false,
+      });
 
-    launchImageLibrary(options, async (response) => {
-      if (response.didCancel) {
-        console.log('User cancelled');
-        return;
-      }
-      
-      if (response.errorMessage) {
-        Alert.alert('Error', response.errorMessage);
-        return;
-      }
-
-      if (!response.assets || response.assets.length === 0) {
-        return;
-      }
-
-      const file = response.assets[0];
       const maxSize = 5 * 1024 * 1024;
-
-      if (file.fileSize && file.fileSize > maxSize) {
+      if (file.size && file.size > maxSize) {
         Alert.alert('Error', 'File size must be less than 5MB');
         return;
       }
 
-      try {
-        setUploadingResume(true);
+      setUploadingResume(true);
 
-        const parserResponse = await ReactNativeBlobUtil.fetch(
-          'POST',
-          'https://resumeparser.api.thezift.com/upload-resume/',
-          { 'Content-Type': 'multipart/form-data' },
-          [
-            {
-              name: 'file',
-              filename: file.fileName || 'resume.pdf',
-              type: file.type || 'application/pdf',
-              data: ReactNativeBlobUtil.wrap(file.uri)
-            }
-          ]
-        );
+      const parserResponse = await ReactNativeBlobUtil.fetch(
+        'POST',
+        'https://resumeparser.api.thezift.com/upload-resume/',
+        { 'Content-Type': 'multipart/form-data' },
+        [
+          {
+            name: 'file',
+            filename: file.name || 'resume.pdf',
+            type: file.type || 'application/pdf',
+            data: ReactNativeBlobUtil.wrap(file.uri)
+          }
+        ]
+      );
 
-        const parsedData = JSON.parse(parserResponse.data);
-        await Axios.post('/resume/save', parsedData);
+      const parsedData = JSON.parse(parserResponse.data);
+      await Axios.post('/resume/save', parsedData);
 
-        Alert.alert('Success', 'Resume uploaded successfully!');
-        fetchUserProfile();
-      } catch (error) {
+      Alert.alert('Success', 'Resume uploaded successfully!');
+      fetchUserProfile();
+    } catch (error: any) {
+      if (error?.message !== 'User canceled document picker') {
         console.error('Resume upload error:', error);
         Alert.alert('Error', 'Failed to upload resume.');
-      } finally {
-        setUploadingResume(false);
       }
-    });
+    } finally {
+      setUploadingResume(false);
+    }
   };
 
   const handleViewResume = async () => {
